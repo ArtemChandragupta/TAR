@@ -11,7 +11,6 @@
 #set page(
   paper: "a4",
   margin: (left:3cm, right:1.5cm, y:2cm),
-  numbering: "1",
   number-align: right,
 )
 #set par(
@@ -113,6 +112,9 @@
   counter(figure.where(kind: image)).update(0)
   it
 }
+
+#counter(page).update(0)
+#set page(numbering: "1")
 
 #heading(outlined:false)[Реферат]
 
