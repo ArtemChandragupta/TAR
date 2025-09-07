@@ -9,6 +9,7 @@ begin
 	using DifferentialEquations
 	using CairoMakie
 	using LaTeXStrings
+	using Optim
 end
 
 # ╔═╡ 640957b3-f073-4049-9d3a-7e2e1ca6b1ec
@@ -44,43 +45,43 @@ function simulate_system(;
     solve(prob, Tsit5(), reltol=1e-6, abstol=1e-6)
 end
 
-# ╔═╡ 5af27819-0638-41d7-8244-daa4cadd0b8e
-function simulate_garmonic(;
-    T     = 7,
-    ξ     = 0.4,
-	ωn    = 2.0,  # Собственная частота
-    Ts    = 0.7,
-	K     = 1.0,
-	η     = t -> t >= 2 ? -1 : 0.0,
-	u0    = [0.0, 0.0],
-    tspan = (0.0, 20.0)
-)
-    function system!(du, u, p, t)
-        y, dy = u
-        du[1] = dy
-        du[2] = K * ωn^2 * η - 2ξ * ωn * dy - ωn^2 * y
-    end
-	
-    prob = ODEProblem(system!, u0, tspan)
-    solve(prob, Tsit5(), reltol=1e-6, abstol=1e-6)
-end
-
 # ╔═╡ 7cd481c6-a79e-4030-a606-dd4f9ce81ce3
 function simulate_oscillatory_link(;
-    ζ   = 0.5,     # Коэффициент демпфирования
-	T   = 0.5,     # Постоянная времени звена
-    K   = 0.12,    # Коэффициент усиления
-    u0 = [0.0, 0.0],  # Начальные условия [y, dy/dt]
+    ζ   = 0.25,
+	T   = 0.75,
+    K   = -0.12,
+	ηг = t -> t >= 2 ? -1 : 0.0,
+    u0 = [0.0, 0.0],
     tspan = (0.0, 20.0)
 )
     function oscillatory_link!(du, u, p, t)
         y, dy = u
-        u_input = t >= 2 ? 1.0 : 0.0
         du[1] = dy
-        du[2] = K * 1/T^2 * u_input - 2ζ/T * dy - y/T^2
+        du[2] = (K*ηг(t) - 2ζ*T*dy - y) / T^2
     end
 
     prob = ODEProblem(oscillatory_link!, u0, tspan)
+    solve(prob, Tsit5(), reltol=1e-6, abstol=1e-6)
+end
+
+# ╔═╡ e36ad3ec-3c32-4a6c-a9e4-3fd317e100b6
+function simulate_system_W(;
+    Ta = 7,
+    Tπ = 0.4,
+    Ts = 0.7,
+    δω = 0.12,
+	ηг = t -> t >= 2 ? -1 : 0.0,
+	u0  = [0.0, 0.0, 0.0],
+    tspan = (0.0, 20.0)
+)
+    function system!(du, u, p, t)
+        y, dy, ddy = u
+        du[1] = dy
+		du[2] = ddy
+        du[3] = -1/(Ta * Tπ * Ts) * ηг(t) - (Tπ+Ts) / (Tπ * Ts) * ddy - dy / (Tπ * Ts) - y/(δω * Ta * Tπ * Ts)
+	end
+	
+    prob = ODEProblem(system!, u0, tspan)
     solve(prob, Tsit5(), reltol=1e-6, abstol=1e-6)
 end
 
@@ -88,9 +89,40 @@ end
 begin
 	f = Figure()
 	ax = Axis(f[1, 1])
-	plot!(ax, simulate_oscillatory_link(), idxs=1, label="oscillation")
-	plot!(ax, simulate_system(), idxs=1, label="original")
+	plot!(ax, simulate_oscillatory_link(), idxs=1, label="oscillation", color = "red")
+	plot!(ax, simulate_system(), idxs=1, label="original", color = "black")
 	f
+end
+
+# ╔═╡ 31673369-ff74-4c4b-9774-65be1070ba8d
+begin
+	# Получение данных исходной системы
+	sol_original = simulate_system()
+	t = sol_original.t
+	indices = t .>= 2  # Берем точки после воздействия
+	t_samples = t[indices]
+	y_original = sol_original[1, indices]  # Выход исходной системы (φ)
+	
+	# Функция ошибки между системами
+	function error_function(params)
+	    K, T, ζ = params
+	    try
+	        sol_osc = simulate_oscillatory_link(K=K, T=T, ζ=ζ, tspan=(0.0, 20.0))
+	        y_osc = [sol_osc(t)[1] for t in t_samples]
+	        return mean((y_osc - y_original).^2)
+	    catch
+	        return Inf
+	    end
+	end
+	
+	# Начальные параметры: K ≈ -0.12, T > 0, ζ > 0
+	initial_params = [-0.12, 0.1, 0.5]
+	
+	# Оптимизация методом Нелдера-Мида
+	result = optimize(error_function, initial_params, NelderMead(), Optim.Options(iterations=1000))
+	K_opt, T_opt, ζ_opt = result.minimizer
+	
+	println("Оптимальные параметры: K = ", K_opt, ", T = ", T_opt, ", ζ = ", ζ_opt)
 end
 
 # ╔═╡ 3eb0defa-14b0-43ab-a8c6-d7de1258b2d6
@@ -246,11 +278,13 @@ PLUTO_PROJECT_TOML_CONTENTS = """
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 DifferentialEquations = "0c46a032-eb83-5123-abaf-570d42b7fbaa"
 LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
+Optim = "429524aa-4258-5aef-a3af-852621145aeb"
 
 [compat]
 CairoMakie = "~0.13.6"
 DifferentialEquations = "~7.16.0"
 LaTeXStrings = "~1.4.0"
+Optim = "~1.11.0"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
@@ -259,7 +293,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.11.6"
 manifest_format = "2.0"
-project_hash = "ebc5f55514b1999b3c3291795516d359d378cbd2"
+project_hash = "984c41a1bcdbddfce6f64eefc9fe604061371391"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "e2478490447631aedba0823d4d7a80b2cc8cdb32"
@@ -3035,9 +3069,10 @@ version = "3.5.0+0"
 # ╠═098273ae-0777-11f0-1293-513a49ace68d
 # ╟─640957b3-f073-4049-9d3a-7e2e1ca6b1ec
 # ╠═9fd039b8-033f-4bf3-9eca-1101e6cfa678
-# ╟─5af27819-0638-41d7-8244-daa4cadd0b8e
 # ╠═7cd481c6-a79e-4030-a606-dd4f9ce81ce3
+# ╟─e36ad3ec-3c32-4a6c-a9e4-3fd317e100b6
 # ╠═cfc58eda-ee3d-4244-8a7a-980d1f9ddb02
+# ╠═31673369-ff74-4c4b-9774-65be1070ba8d
 # ╟─3eb0defa-14b0-43ab-a8c6-d7de1258b2d6
 # ╟─3ff392b7-25a4-40a3-9dff-da36b8192388
 # ╠═fdea7399-e58b-4d58-9a77-d5a036b0b8d9

@@ -1,12 +1,10 @@
 // Импорт сторонних пакетов
-#import "@preview/showybox:2.0.4": showybox // Коробки
-#import "@preview/physica:0.9.5": *         // Физические формулы
-#import "@preview/codly:1.3.0": *           // Листинги
-#import "@preview/cetz:0.4.1"               // Диаграммы
-#import "@preview/lilaq:0.4.0" as lq        // Графики
-#import "@preview/pinit:0.2.2": *           // Выделение
-#import "@preview/mannot:0.3.0": *          // Математические аннотации
-#import "@preview/tiptoe:0.3.1"             // Стрелочки
+#import "@preview/physica:0.9.5": *  // Физические формулы
+#import "@preview/codly:1.3.0": *    // Листинги
+#import "@preview/cetz:0.4.1"        // Диаграммы
+#import "@preview/lilaq:0.4.0" as lq // Графики
+#import "@preview/pinit:0.2.2": *    // Выделение
+#import "@preview/mannot:0.3.0": *   // Математические аннотации
 #import "@preview/fletcher:0.5.8" as fletcher: diagram, node, edge
 
 #let conf(

@@ -88,9 +88,15 @@ $
 
 Эта система уравнений, подготовленная для анализа средствами DifferentialEquations.jl, записана в функции, приведённой на @list1[листинге].
 
+$ W(s) = delta_omega / ( 1 + delta_omega dot T_a lambda dot (T_pi lambda + 1) (T_s lambda +1) ) = \ =
+  delta_omega / ( 1 + delta_omega dot T_a lambda dot (T_pi T_s lambda^2 + (T_pi + T_s) lambda + 1 ) ) = \ =
+  1 / ( 1/delta_omega + T_a T_pi T_s lambda^3 + T_a (T_pi + T_s) lambda^2 + T_a lambda ) = \ =
+
+ $
+
 Колебательное звено также представлено его передаточной функцией:
 
-$ W(s) = K / (T^2 s^2 + 2 zeta T s + 1) $
+$ W(s) = K / (T^2 lambda^2 + 2 zeta T lambda + 1) $
 
 #h(-1.25cm) где  #context box(baseline: 100% - measure([a]).height, grid(
   columns: 2,
