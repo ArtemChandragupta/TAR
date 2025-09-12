@@ -9,30 +9,22 @@ begin
 	using DifferentialEquations
 	using CairoMakie
 	using LaTeXStrings
-	using Optim
 end
 
-# ╔═╡ 640957b3-f073-4049-9d3a-7e2e1ca6b1ec
-param_labels = Dict(
-	:Ta => L"T_a",
-    :Tπ => L"T_\pi",
-    :Ts => L"T_s",
-	:δω => L"\delta_\omega",
-    :ηг => L"\eta_{\text{г}}",
-    :u0 => L"u_0",
-    :tspan => L"t_{\text{span}}"
-)
+# ╔═╡ 274fcf6a-921f-413b-94cd-c3eded49de0a
+taskparams = (;Ta = 7,
+			  Tπ = 0.4,
+			  Ts = 0.7,
+			  δω = 0.12,
+			  ηг = t -> t >= 0 ? -1 : 0.0,
+			  u0  = [0.0, 0.0, 0.0],
+			  tspan = (0.0, 20.0)
+			 )
 
 # ╔═╡ 9fd039b8-033f-4bf3-9eca-1101e6cfa678
-function simulate_system(;
-    Ta = 7,
-    Tπ = 0.4,
-    Ts = 0.7,
-    δω = 0.12,
-	ηг = t -> t >= 2 ? -1 : 0.0,
-	u0  = [0.0, 0.0, 0.0],
-    tspan = (0.0, 20.0)
-)
+function simulate_system()
+	(; Ta, Tπ, Ts, δω, ηг, u0, tspan) = taskparams
+	
     function system!(du, u, p, t)
         φ, π, ξ = u
         η = -φ / δω
@@ -45,231 +37,176 @@ function simulate_system(;
     solve(prob, Tsit5(), reltol=1e-6, abstol=1e-6)
 end
 
-# ╔═╡ 7cd481c6-a79e-4030-a606-dd4f9ce81ce3
-function simulate_oscillatory_link(;
-    ζ   = 0.25,
-	T   = 0.75,
-    K   = -0.12,
-	ηг = t -> t >= 2 ? -1 : 0.0,
-    u0 = [0.0, 0.0],
-    tspan = (0.0, 20.0)
-)
-    function oscillatory_link!(du, u, p, t)
-        y, dy = u
-        du[1] = dy
-        du[2] = (K*ηг(t) - 2ζ*T*dy - y) / T^2
-    end
-
-    prob = ODEProblem(oscillatory_link!, u0, tspan)
-    solve(prob, Tsit5(), reltol=1e-6, abstol=1e-6)
-end
-
 # ╔═╡ e36ad3ec-3c32-4a6c-a9e4-3fd317e100b6
-function simulate_system_W(;
+function simulate_system_W_old(;
     Ta = 7,
     Tπ = 0.4,
     Ts = 0.7,
     δω = 0.12,
-	ηг = t -> t >= 2 ? -1 : 0.0,
+	ηг = t -> t >= 0 ? -1 : 0.0,
 	u0  = [0.0, 0.0, 0.0],
     tspan = (0.0, 20.0)
 )
     function system!(du, u, p, t)
-        y, dy, ddy = u
-        du[1] = dy
-		du[2] = ddy
-        du[3] = -1/(Ta * Tπ * Ts) * ηг(t) - (Tπ+Ts) / (Tπ * Ts) * ddy - dy / (Tπ * Ts) - y/(δω * Ta * Tπ * Ts)
+        φ, dφ, d2φ = u
+        du[1] = dφ
+		du[2] = d2φ
+        du[3] = -1/(Ta * Tπ * Ts) * ηг(t) - (Tπ+Ts) / (Tπ * Ts) * d2φ - dφ / (Tπ * Ts) - φ/(δω * Ta * Tπ * Ts)
 	end
 	
     prob = ODEProblem(system!, u0, tspan)
     solve(prob, Tsit5(), reltol=1e-6, abstol=1e-6)
 end
 
-# ╔═╡ cfc58eda-ee3d-4244-8a7a-980d1f9ddb02
+# ╔═╡ dae83640-5e22-4912-8946-3a03a9235b51
+function simulate_system_W(;
+    Ta = 7,
+    Tπ = 0.4,
+    Ts = 0.7,
+    δω = 0.12,
+	ηг = t -> t >= 0 ? 1 : 0.0,
+	#u0  = [0.0, 0.1, 0.049],
+	#u0  = [0.0, 0.1, 0.7],
+	u0  = [0.0, 0.0, 0.0],
+    tspan = (0.0, 20.0)
+)
+    function system!(du, u, p, t)
+        φ, dφ, d2φ = u
+        du[1] = dφ
+		du[2] = d2φ
+        du[3] = (Tπ * Ts * d2φ + (Tπ+Ts)*dφ +1)/(Ta * Tπ * Ts) * ηг(t) - (Tπ+Ts) / (Tπ * Ts) * d2φ - dφ / (Tπ * Ts) - φ/(δω * Ta * Tπ * Ts)
+	end
+	
+    prob = ODEProblem(system!, u0, tspan)
+    solve(prob, Tsit5(), reltol=1e-6, abstol=1e-6)
+end
+
+# ╔═╡ 3f41822d-898c-4153-a773-4ea43a98edb6
+function simulate_oscillatory_link(;
+    K, ζ, T,
+	ηг = t -> t >= 0 ? -1 : 0.0,
+	u0 = [0,0],
+    tspan = (0.0, 20.0)
+)
+    function oscillatory_link!(du, u, p, t)
+        φ, dφ = u
+        du[1] = dφ
+        du[2] = (-K*ηг(t) - 2ζ*T*dφ - φ) / T^2
+    end
+
+    prob = ODEProblem(oscillatory_link!, u0, tspan)
+    solve(prob, Tsit5(), reltol=1e-6, abstol=1e-6)
+end
+
+# ╔═╡ 3801b4c4-8903-4a58-b0b2-832f84811434
+function simulate_oscillatory_link_W(;
+    K, ζ, T,
+	ηг = t -> t >= 0 ? -1 : 0.0,
+    u0 = [0.0, 0.12],
+    tspan = (0.0, 20.0)
+)
+    function oscillatory_link!(du, u, p, t)
+        φ, dφ = u
+        du[1] = dφ
+        du[2] = (-K*ηг(t) - 2ζ*T*dφ - φ) / T^2
+    end
+
+    prob = ODEProblem(oscillatory_link!, u0, tspan)
+    solve(prob, Tsit5(), reltol=1e-6, abstol=1e-6)
+end
+
+# ╔═╡ 42bee866-f155-47af-b122-e4197f15b1e6
+begin
+	sol = simulate_system()
+	max_phi, max_idx = findmax([u[1] for u in sol.u])
+	min_phi, min_idx = findmin([u[1] for u in sol.u[max_idx:end]])
+	
+	(A₁,A₂) = (max_phi-taskparams.δω, taskparams.δω-min_phi)
+	ω = π / (sol.t[max_idx + min_idx - 1] - sol.t[max_idx])
+
+	α = ω/π * log(A₁/A₂)
+	pζ = α / √(α^2 + ω^2)
+	pT = 1/ω * √(1-pζ^2)
+
+	osc = simulate_oscillatory_link(K=taskparams.δω, ζ=pζ, T=pT)
+
+	max_phi_osc, max_idx_osc = findmax([u[1] for u in osc.u])
+	min_phi_osc, min_idx_osc = findmin([u[1] for u in osc.u[max_idx_osc:end]])
+
+	oscW = simulate_oscillatory_link_W(K=taskparams.δω, ζ=pζ, T=pT)
+
+	md"# Вычисления"
+end
+
+# ╔═╡ de938d30-5a8c-426d-b385-047ff55fcda4
 begin
 	f = Figure()
 	ax = Axis(f[1, 1])
-	plot!(ax, simulate_oscillatory_link(), idxs=1, label="oscillation", color = "red")
-	plot!(ax, simulate_system(), idxs=1, label="original", color = "black")
-	f
+	plot!(ax, osc, idxs=1, color = "red")
+	plot!(ax, sol, idxs=1)
+	#f
 end
 
-# ╔═╡ 31673369-ff74-4c4b-9774-65be1070ba8d
+# ╔═╡ a72f705b-eeaa-45cb-8854-8b17b73d4b07
 begin
-	# Получение данных исходной системы
-	sol_original = simulate_system()
-	t = sol_original.t
-	indices = t .>= 2  # Берем точки после воздействия
-	t_samples = t[indices]
-	y_original = sol_original[1, indices]  # Выход исходной системы (φ)
-	
-	# Функция ошибки между системами
-	function error_function(params)
-	    K, T, ζ = params
-	    try
-	        sol_osc = simulate_oscillatory_link(K=K, T=T, ζ=ζ, tspan=(0.0, 20.0))
-	        y_osc = [sol_osc(t)[1] for t in t_samples]
-	        return mean((y_osc - y_original).^2)
-	    catch
-	        return Inf
-	    end
+	tsol = sol.t
+	phisol = sol[1, :]
+	tosc = osc.t
+	phiosc = osc[1, :]
+	toscW = oscW.t
+	phioscW = oscW[1, :]
+
+	open("data.typ", "w") do file
+		write(file,
+			  "#let K = $(taskparams.δω) \n
+			   #let ζ = $(pζ) \n
+			   #let T = $(pT) \n
+			   #let a = $(α) \n
+			   #let ome = $(ω) \n
+			   #let A1 = $(A₁) \n
+			   #let A2 = $(A₂) \n
+			  
+			   #let Tmax = $(sol.t[max_idx]) \n
+			   #let Tmin = $(sol.t[max_idx + min_idx - 1]) \n
+			   #let Pmax = $(max_phi) \n
+			   #let Pmin = $(min_phi) \n
+			  
+			   #let Tmax_osc = $(osc.t[max_idx_osc]) \n
+			   #let Tmin_osc = $(osc.t[max_idx_osc + min_idx_osc - 1]) \n
+			   #let Pmax_osc = $(max_phi_osc) \n
+			   #let Pmin_osc = $(min_phi_osc) \n
+			  ")
+		
+   		write(file, "#let datasol = (\n (")
+   		for i in 1:length(tsol)
+    		write(file, "  $(tsol[i]),")
+    	end
+		write(file, "), \n (")
+		for i in 1:length(phisol)
+    		write(file, "  $(phisol[i]),")
+    	end
+    	write(file, ") ) \n")
+
+		write(file, "#let dataosc = (\n (")
+   		for i in 1:length(tosc)
+    		write(file, "  $(tosc[i]),")
+    	end
+		write(file, "), \n (")
+		for i in 1:length(phiosc)
+    		write(file, "  $(phiosc[i]),")
+    	end
+    	write(file, ") ) \n")
+
+		write(file, "#let dataoscW = (\n (")
+   		for i in 1:length(toscW)
+    		write(file, "  $(toscW[i]),")
+    	end
+		write(file, "), \n (")
+		for i in 1:length(phioscW)
+    		write(file, "  $(phioscW[i]),")
+    	end
+    	write(file, ") ) \n")
 	end
-	
-	# Начальные параметры: K ≈ -0.12, T > 0, ζ > 0
-	initial_params = [-0.12, 0.1, 0.5]
-	
-	# Оптимизация методом Нелдера-Мида
-	result = optimize(error_function, initial_params, NelderMead(), Optim.Options(iterations=1000))
-	K_opt, T_opt, ζ_opt = result.minimizer
-	
-	println("Оптимальные параметры: K = ", K_opt, ", T = ", T_opt, ", ζ = ", ζ_opt)
-end
-
-# ╔═╡ 3eb0defa-14b0-43ab-a8c6-d7de1258b2d6
-# ╠═╡ disabled = true
-#=╠═╡
-function find_critical_Ta_corrected(;
-    param_name=:Ta,
-    min=1.0,
-    max=3.0,
-    tol=1e-3,
-    tspan=(0.0, 300.0))
-
-    function get_peak_ratio(sol)
-        φ = sol[1,:]
-        peaks = Float64[]
-
-        for i in (2):(length(φ)-1)
-            if φ[i] > φ[i-1] && φ[i] > φ[i+1]
-                push!(peaks, φ[i])
-            end
-        end
-
-        if isempty(peaks)
-            return φ[end] > φ[1] ? Inf : 0.0
-        end
-
-        length(peaks) < 2 && return 0.0
-        p1, p2 = peaks[1], last(peaks)
-        abs(p2 / p1)
-    end
-
-    # Бинарный поиск с динамическим параметром
-    while (max - min) > tol
-        mid = (min + max)/2
-        sol = simulate_system(; [(param_name => mid)]..., tspan=tspan)
-        ratio = get_peak_ratio(sol)
-        
-        ratio >= 1.0 ? (min = mid) : (max = mid)
-    end
-
-    critical = max
-
-    # Верификационный запуск с критическим значением
-    sol_test = simulate_system(; [(param_name => critical)]..., tspan=tspan)
-    plt = plot(sol_test, idxs=1,  
-         legend=false, 
-         xlabel="t", 
-         ylabel=L"\varphi(t)",
-		 fmt = :svg
-	)
-	savefig("assets/waw.svg")
-    plt
-	critical
-end
-  ╠═╡ =#
-
-# ╔═╡ 3ff392b7-25a4-40a3-9dff-da36b8192388
-function find_settling_time(sol, phi_steady; tolerance=0.05)
-    times = sol.t
-    phi_values = sol[1, :]
-    lower = phi_steady * (1 - tolerance)
-    upper = phi_steady * (1 + tolerance)
-    
-    # Идем с конца к началу
-    for i in length(phi_values):-1:1
-        if !(lower <= phi_values[i] <= upper)
-            return i < length(times) ? times[i+1] : times[end]
-        end
-    end
-    return times[1]
-end
-
-# ╔═╡ fdea7399-e58b-4d58-9a77-d5a036b0b8d9
-# ╠═╡ disabled = true
-#=╠═╡
-find_critical_Ta_corrected(min=1, max=7)
-  ╠═╡ =#
-
-# ╔═╡ 03fefec0-d9ca-4874-92bf-a44605269bf7
-function build_surface(; varying_param, param_values)
-	t_grid=range(0.0, 30.0, length=500)
-
-    ylabel = get(param_labels, varying_param, string(varying_param))
-    zlabel = L"$\varphi(t$, %$(ylabel)$)$"
-
-	φ = map(param_values) do p
-        sol = simulate_system(; varying_param => p)
-        itp = linear_interpolation(sol.t, sol[1, :]; extrapolation_bc=Line())
-        itp.(t_grid)  # Автоматическое применение ко всем элементам t_grid
-    end
-
-    plt = surface(t_grid, param_values, hcat(φ...)',
-				  xlabel = L"t, c",
-				  ylabel = varying_param == :δω ? L"%$(ylabel)$, \% $" : L"%$(ylabel)$, c$",
-				  zlabel = zlabel,
-				  yflip  = true,
-				  ylims  = varying_param == :Ta ? (2, 10) : (param_values[1],param_values[end]+0.0001),
-				  tick_direction = :out,
-				  framestyle = :box,
-				  size = (700, 600),
-				  colormap = :rainbow,
-				  gridlinewidth = 2
-    )
-
-    savefig(plt, "assets/surface_plot_$(varying_param).svg")
-    plt
-end
-
-# ╔═╡ 3d75bd9e-111d-42f1-a67a-3b44f5962f0c
-function plot_unified(; varying_param, param_values)
-
-	solutions = map(param_values) do p
-        simulate_system(; varying_param => p)
-    end
-
-	settling_times = [find_settling_time(sol, sol[1,end]; tolerance=0.05) for sol in solutions]
-	dynamic_errors = [maximum(abs.(sol[1, :])) for sol in solutions]
-	static_errors  = [sol[1,end] for sol in solutions]
-
-	ylabel = get(param_labels, varying_param, string(varying_param))
-
-	pls = plot(param_values, settling_times,
-        xlabel = varying_param == :δω ? L"%$(ylabel)$, \% $" : L"%$(ylabel)$, c$",
-        ylabel = L"t_п,c",
-		label  = L"t_п",
-        color  = :red,
-		legend = :left,
-		tick_direction = :out,
-	)
-
-	axis2 = twinx();
-
-	plot!(axis2, param_values, dynamic_errors,
-		  ylabel = L"\varphi",
-		  color  = :blue,
-		  legend = :right,
-		  label  = L"\varphi_{max}",
-		  tick_direction = :out,
-	)
-
-	plot!(axis2, param_values, static_errors,
-		  color = :green,
-		  label = L"$\varphi_\infty$"
-	)
-
-	savefig("assets/uni_$(varying_param).svg")
-	pls
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
@@ -278,13 +215,11 @@ PLUTO_PROJECT_TOML_CONTENTS = """
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 DifferentialEquations = "0c46a032-eb83-5123-abaf-570d42b7fbaa"
 LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
-Optim = "429524aa-4258-5aef-a3af-852621145aeb"
 
 [compat]
 CairoMakie = "~0.13.6"
 DifferentialEquations = "~7.16.0"
 LaTeXStrings = "~1.4.0"
-Optim = "~1.11.0"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
@@ -293,7 +228,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.11.6"
 manifest_format = "2.0"
-project_hash = "984c41a1bcdbddfce6f64eefc9fe604061371391"
+project_hash = "ebc5f55514b1999b3c3291795516d359d378cbd2"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "e2478490447631aedba0823d4d7a80b2cc8cdb32"
@@ -3066,17 +3001,15 @@ version = "3.5.0+0"
 """
 
 # ╔═╡ Cell order:
-# ╠═098273ae-0777-11f0-1293-513a49ace68d
-# ╟─640957b3-f073-4049-9d3a-7e2e1ca6b1ec
+# ╟─098273ae-0777-11f0-1293-513a49ace68d
+# ╠═274fcf6a-921f-413b-94cd-c3eded49de0a
 # ╠═9fd039b8-033f-4bf3-9eca-1101e6cfa678
-# ╠═7cd481c6-a79e-4030-a606-dd4f9ce81ce3
 # ╟─e36ad3ec-3c32-4a6c-a9e4-3fd317e100b6
-# ╠═cfc58eda-ee3d-4244-8a7a-980d1f9ddb02
-# ╠═31673369-ff74-4c4b-9774-65be1070ba8d
-# ╟─3eb0defa-14b0-43ab-a8c6-d7de1258b2d6
-# ╟─3ff392b7-25a4-40a3-9dff-da36b8192388
-# ╠═fdea7399-e58b-4d58-9a77-d5a036b0b8d9
-# ╟─03fefec0-d9ca-4874-92bf-a44605269bf7
-# ╠═3d75bd9e-111d-42f1-a67a-3b44f5962f0c
+# ╟─dae83640-5e22-4912-8946-3a03a9235b51
+# ╟─3f41822d-898c-4153-a773-4ea43a98edb6
+# ╟─3801b4c4-8903-4a58-b0b2-832f84811434
+# ╠═42bee866-f155-47af-b122-e4197f15b1e6
+# ╠═de938d30-5a8c-426d-b385-047ff55fcda4
+# ╠═a72f705b-eeaa-45cb-8854-8b17b73d4b07
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
