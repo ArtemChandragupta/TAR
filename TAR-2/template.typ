@@ -42,10 +42,10 @@
     linebreak()
   }
   
-  set list(marker: [---])
+  set list(marker: [--])
   set figure.caption(separator: [ --- ])
   show figure.where(kind:"listing"): set figure.caption(position:top)
-  show figure.caption.where(kind: "listing"): it => align(right, it)
+  show figure.caption.where(kind: "listing"): it => align(left, it)
 
   show figure.where(kind: table): set figure.caption(position:top)
   show figure.caption.where(kind: table): it => align(left, it)
