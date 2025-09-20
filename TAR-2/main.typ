@@ -307,7 +307,6 @@ $ T = 1 / omega sqrt(1 + zeta^2) = 1 / #calc.round(ome, digits:3) sqrt(1 + #calc
 
 #bibliography(
   "ref.bib",
-  full: true,
   style: "gost-r-705-2008-numeric",
   title: "Литерарура",
 )
