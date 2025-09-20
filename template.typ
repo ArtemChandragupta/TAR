@@ -2,9 +2,7 @@
 #import "@preview/physica:0.9.5": *  // Физические формулы
 #import "@preview/codly:1.3.0": *    // Листинги
 #import "@preview/cetz:0.4.2"        // Диаграммы
-#import "@preview/lilaq:0.4.0" as lq // Графики
-#import "@preview/pinit:0.2.2": *    // Выделение
-#import "@preview/mannot:0.3.0": *   // Математические аннотации
+#import "@preview/lilaq:0.5.0" as lq // Графики
 #import "@preview/fletcher:0.5.8" as fletcher: diagram, node, edge
 
 #let conf(
