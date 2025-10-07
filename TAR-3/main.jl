@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.13
+# v0.20.18
 
 using Markdown
 using InteractiveUtils
@@ -12,142 +12,164 @@ begin
 end
 
 # ╔═╡ 274fcf6a-921f-413b-94cd-c3eded49de0a
-taskparams = (;Ta = 7,
-			  Tπ = 0.4,
-			  Ts = 0.7,
-			  δω = 0.12,
-			  ηг = t -> t >= 0 ? -1 : 0.0,
-			  u0  = [0.0, 0.0, 0.0],
-			  tspan = (0.0, 20.0)
+taskparams = (;Ta = 5,
+			   Ts = 0.4,
+			   δω = 0.06,
+			   νг = t -> t >= 0 ? -1 : 0.0,
+			   tspan = (0.0, 10.0)
 			 )
 
+# ╔═╡ ac30ea21-4f15-4dce-ae35-fb2957637b58
+task_4 = (;Ta = 5,
+		   Ts = 0.4,
+		   δω = 0.06,
+		   νг = t -> t >= 0 ? -1 : 0.0,
+		   tspan = (0.0, 10.0)
+		 )
+
 # ╔═╡ 9fd039b8-033f-4bf3-9eca-1101e6cfa678
-function simulate_system()
-	(; Ta, Tπ, Ts, δω, ηг, u0, tspan) = taskparams
-	
+function simulate_system_ras()
+	(; Ta, Ts, δω, νг, tspan) = taskparams
+	u0 = [0.0, 0.0]
+
     function system!(du, u, p, t)
-        φ, π, ξ = u
-        η = -φ / δω
-        du[1] = (π - ηг(t)) / Ta
-        du[2] = (ξ - π    ) / Tπ
-        du[3] = (η - ξ    ) / Ts
+        φ, ξ = u
+        σ = -φ / δω
+        du[1] = (ξ - νг(t)) / Ta
+        du[2] = (σ - ξ    ) / Ts
     end
-	
+
     prob = ODEProblem(system!, u0, tspan)
     solve(prob, Tsit5(), reltol=1e-6, abstol=1e-6)
 end
 
-# ╔═╡ e36ad3ec-3c32-4a6c-a9e4-3fd317e100b6
-function simulate_system_W_old(;
-    Ta = 7,
-    Tπ = 0.4,
-    Ts = 0.7,
-    δω = 0.12,
-	ηг = t -> t >= 0 ? -1 : 0.0,
-	u0  = [0.0, 0.0, 0.0],
-    tspan = (0.0, 20.0)
-)
+# ╔═╡ 94f52d33-836c-4aa2-a110-2f31105dc693
+function simulate_system_cor(T1 = 0.2, T2 = 0.02 )
+	(; Ta, Ts, δω, νг, tspan) = taskparams
+	u0  = [0.0, 0.0, 0.0]
+
     function system!(du, u, p, t)
-        φ, dφ, d2φ = u
-        du[1] = dφ
-		du[2] = d2φ
-        du[3] = -1/(Ta * Tπ * Ts) * ηг(t) - (Tπ+Ts) / (Tπ * Ts) * d2φ - dφ / (Tπ * Ts) - φ/(δω * Ta * Tπ * Ts)
-	end
-	
+        φ, ξ, η = u
+        σ = -φ / δω
+        du[1] = (ξ - νг(t)) / Ta
+        du[2] = (η - ξ    ) / Ts
+        du[3] = ( -T1 * du[1] / δω + σ - η) / T2
+    end
+
     prob = ODEProblem(system!, u0, tspan)
     solve(prob, Tsit5(), reltol=1e-6, abstol=1e-6)
 end
 
-# ╔═╡ dae83640-5e22-4912-8946-3a03a9235b51
-function simulate_system_W(;
-    Ta = 7,
-    Tπ = 0.4,
-    Ts = 0.7,
-    δω = 0.12,
-	ηг = t -> t >= 0 ? 1 : 0.0,
-	#u0  = [0.0, 0.1, 0.049],
-	#u0  = [0.0, 0.1, 0.7],
-	u0  = [0.0, 0.0, 0.0],
-    tspan = (0.0, 20.0)
-)
-    function system!(du, u, p, t)
-        φ, dφ, d2φ = u
-        du[1] = dφ
-		du[2] = d2φ
-        du[3] = (Tπ * Ts * d2φ + (Tπ+Ts)*dφ +1)/(Ta * Tπ * Ts) * ηг(t) - (Tπ+Ts) / (Tπ * Ts) * d2φ - dφ / (Tπ * Ts) - φ/(δω * Ta * Tπ * Ts)
-	end
-	
-    prob = ODEProblem(system!, u0, tspan)
-    solve(prob, Tsit5(), reltol=1e-6, abstol=1e-6)
-end
-
-# ╔═╡ 3f41822d-898c-4153-a773-4ea43a98edb6
-function simulate_oscillatory_link(;
-    K, ζ, T,
-	ηг = t -> t >= 0 ? -1 : 0.0,
-	u0 = [0,0],
-    tspan = (0.0, 20.0)
-)
-    function oscillatory_link!(du, u, p, t)
-        φ, dφ = u
-        du[1] = dφ
-        du[2] = (-K*ηг(t) - 2ζ*T*dφ - φ) / T^2
-    end
-
-    prob = ODEProblem(oscillatory_link!, u0, tspan)
-    solve(prob, Tsit5(), reltol=1e-6, abstol=1e-6)
-end
-
-# ╔═╡ 3801b4c4-8903-4a58-b0b2-832f84811434
-function simulate_oscillatory_link_W(;
-    K, ζ, T,
-	ηг = t -> t >= 0 ? -1 : 0.0,
-    u0 = [0.0, 0.12],
-    tspan = (0.0, 20.0)
-)
-    function oscillatory_link!(du, u, p, t)
-        φ, dφ = u
-        du[1] = dφ
-        du[2] = (-K*ηг(t) - 2ζ*T*dφ - φ) / T^2
-    end
-
-    prob = ODEProblem(oscillatory_link!, u0, tspan)
-    solve(prob, Tsit5(), reltol=1e-6, abstol=1e-6)
-end
-
-# ╔═╡ 42bee866-f155-47af-b122-e4197f15b1e6
+# ╔═╡ c02ff179-6e38-4802-bbf1-24427fc7836a
 begin
-	sol = simulate_system()
-	max_phi, max_idx = findmax([u[1] for u in sol.u])
-	min_phi, min_idx = findmin([u[1] for u in sol.u[max_idx:end]])
-	
-	(A₁,A₂) = (max_phi-taskparams.δω, taskparams.δω-min_phi)
-	ω = π / (sol.t[max_idx + min_idx - 1] - sol.t[max_idx])
+    log_ω̄ = range(log(2), log(30π), length=500)
+    ω̄ = exp.(log_ω̄)
 
-	α = ω/π * log(A₁/A₂)
-	pζ = α / √(α^2 + ω^2)
-	pT = 1/ω * √(1-pζ^2)
+	W_ras(ω) = 1 / ( taskparams.δω * taskparams.Ta * ω * im * (taskparams.Ts * ω * im + 1) )
+	val_ras = W_ras.(ω̄)
 
-	osc = simulate_oscillatory_link(K=taskparams.δω, ζ=pζ, T=pT)
+    i_ras = argmin(abs.(abs.(val_ras) .- 1))
+	ω_ras = ω̄[i_ras]
 
-	max_phi_osc, max_idx_osc = findmax([u[1] for u in osc.u])
-	min_phi_osc, min_idx_osc = findmin([u[1] for u in osc.u[max_idx_osc:end]])
+	γ_ras = round(180 + rad2deg(angle(val_ras[i_ras])))
 
-	oscW = simulate_oscillatory_link_W(K=taskparams.δω, ζ=pζ, T=pT)
+	T₁ = 1/ ω_ras
+	T₂ = 0.1T₁
+
+	W_cor(ω) = W_ras(ω) * (T₁ * im*ω + 1) / (T₂ * im*ω + 1)
+	val_cor = W_cor.(ω̄)
+
+	i_cor = argmin(abs.(abs.(val_cor) .- 1))
+	ω_cor = ω̄[i_cor]
+
+	γ_cor = round(180 + rad2deg(angle(val_cor[i_cor])))
 
 	md"# Вычисления"
 end
 
 # ╔═╡ de938d30-5a8c-426d-b385-047ff55fcda4
-begin
-	f = Figure()
+with_theme(theme_latexfonts()) do
+	sol_ras = simulate_system_ras()
+	sol_cor = simulate_system_cor(T₁, T₂,)
+		
+	f = Figure(size = (800,400))
 	ax = Axis(f[1, 1])
-	plot!(ax, osc, idxs=1, color = "red")
-	plot!(ax, sol, idxs=1)
-	#f
+	plot!(ax, sol_ras, idxs=1)
+	plot!(ax, sol_cor, idxs=1, color = :red)
+	f
+end
+
+# ╔═╡ 4495d236-b15c-44d4-ba2c-8ced7293fa00
+function polaroid(values, ind)
+	with_theme(theme_latexfonts()) do
+		θ_cp = angle(values[ind])
+		r_cp = abs(  values[ind])
+		
+        f = Figure()
+        ax = PolarAxis(f[1, 1],
+					   #rminorticksvisible = true,
+					   rticks  = [ 0.5, 1],
+					   rlimits = (0, 1.3)
+					  )
+		
+		# Единичная окружность
+		scatter!(ax, π, 1, color = :red, markersize=10)
+
+		# Дуга угла γ
+		lines!(ax, range(θ_cp, -π, length=50), fill(1.1, 50), color = :gray, linewidth = 1)
+		text!( ax, θ_cp/2 - π/2, 1.1, rotation = θ_cp/2, align = (:center, :top), text = L"\gamma = %$(round(Int, 180 + rad2deg(θ_cp))) \degree" )
+
+		# Линия фазы
+		lines!(ax, fill(θ_cp, 2), [0,1.3],    color =:gray, linewidth=1)
+		# Линия амплитуды
+		lines!(ax, [θ_cp, π], [1,-cos(θ_cp)], color =:gray, linewidth=1)
+		# Скобка для 1/m
+		bracket!(π, -cos(θ_cp), 0, 0, color =:gray, linewidth =1, text = L"\frac{1}{m}", fontsize = 12, textoffset = 12)
+
+		# Собственно график
+		lines!(ax, angle.(values), abs.(values))
+
+		# Точка среза
+		scatter!(ax, [θ_cp],[r_cp], color = Makie.wong_colors(1), markersize = 10 )
+		tooltip!(ax, θ_cp,r_cp, text = L"\omega_{cp} = %$(round(ω̄[ind], digits = 2))", placement = :right, outline_linewidth = 1, )
+
+        f
+    end
+end
+
+# ╔═╡ eacf2f85-c96c-42ca-9dcc-9d8469362345
+polaroid(val_ras, i_ras)
+
+# ╔═╡ 145afb2b-b385-4f6f-bda3-ede01e78e895
+polaroid(val_cor, i_cor)
+
+# ╔═╡ 74aea461-1266-45cb-88bc-fb4a9fd37add
+function calc(task, ω̄ = ω̄)
+	W_ras(ω) = 1/(task.δω*task.Ta * im*ω * (taskparams.Ts * im*ω + 1))
+	val_ras = W_ras.(ω̄)
+
+    i_ras = argmin(abs.(abs.(val_ras) .- 1))
+	ω_ras = ω̄[i_ras]
+
+	γ_ras = round(180 + rad2deg(angle(val_ras[i_ras])))
+
+	T₁ = 1 / ω_ras
+	T₂ = 0.1T₁
+
+	W_cor(ω) = W_ras(ω) * (T₁ * im*ω + 1) / (T₂ * im*ω + 1)
+	val_cor = W_cor.(ω̄)
+
+	i_cor = argmin(abs.(abs.(val_cor) .- 1))
+	ω_cor = ω̄[i_cor]
+
+	γ_cor = round(180 + rad2deg(angle(val_cor[i_cor])))
+
+	(; val_ras, i_ras, ω_ras, γ_ras, T₁, T₂, val_cor, i_cor, ω_cor, γ_cor)
 end
 
 # ╔═╡ a72f705b-eeaa-45cb-8854-8b17b73d4b07
+# ╠═╡ disabled = true
+#=╠═╡
 begin
 	tsol = sol.t
 	phisol = sol[1, :]
@@ -208,6 +230,7 @@ begin
     	write(file, ") ) \n")
 	end
 end
+  ╠═╡ =#
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -226,7 +249,7 @@ LaTeXStrings = "~1.4.0"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.11.6"
+julia_version = "1.11.7"
 manifest_format = "2.0"
 project_hash = "ebc5f55514b1999b3c3291795516d359d378cbd2"
 
@@ -3001,15 +3024,17 @@ version = "3.5.0+0"
 """
 
 # ╔═╡ Cell order:
-# ╟─098273ae-0777-11f0-1293-513a49ace68d
+# ╠═098273ae-0777-11f0-1293-513a49ace68d
 # ╠═274fcf6a-921f-413b-94cd-c3eded49de0a
-# ╠═9fd039b8-033f-4bf3-9eca-1101e6cfa678
-# ╟─e36ad3ec-3c32-4a6c-a9e4-3fd317e100b6
-# ╟─dae83640-5e22-4912-8946-3a03a9235b51
-# ╟─3f41822d-898c-4153-a773-4ea43a98edb6
-# ╟─3801b4c4-8903-4a58-b0b2-832f84811434
-# ╠═42bee866-f155-47af-b122-e4197f15b1e6
+# ╟─ac30ea21-4f15-4dce-ae35-fb2957637b58
+# ╟─9fd039b8-033f-4bf3-9eca-1101e6cfa678
+# ╟─94f52d33-836c-4aa2-a110-2f31105dc693
+# ╠═c02ff179-6e38-4802-bbf1-24427fc7836a
+# ╟─eacf2f85-c96c-42ca-9dcc-9d8469362345
+# ╟─145afb2b-b385-4f6f-bda3-ede01e78e895
 # ╠═de938d30-5a8c-426d-b385-047ff55fcda4
-# ╠═a72f705b-eeaa-45cb-8854-8b17b73d4b07
+# ╟─4495d236-b15c-44d4-ba2c-8ced7293fa00
+# ╠═74aea461-1266-45cb-88bc-fb4a9fd37add
+# ╟─a72f705b-eeaa-45cb-8854-8b17b73d4b07
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
