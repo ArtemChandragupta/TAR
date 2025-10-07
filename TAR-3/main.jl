@@ -12,24 +12,24 @@ begin
 end
 
 # ╔═╡ 274fcf6a-921f-413b-94cd-c3eded49de0a
-taskparams = (;Ta = 5,
-			   Ts = 0.4,
-			   δω = 0.06,
-			   νг = t -> t >= 0 ? -1 : 0.0,
-			   tspan = (0.0, 10.0)
-			 )
-
-# ╔═╡ ac30ea21-4f15-4dce-ae35-fb2957637b58
-task_4 = (;Ta = 5,
+task_3 = (;Ta = 5,
 		   Ts = 0.4,
 		   δω = 0.06,
 		   νг = t -> t >= 0 ? -1 : 0.0,
 		   tspan = (0.0, 10.0)
 		 )
 
+# ╔═╡ ac30ea21-4f15-4dce-ae35-fb2957637b58
+task_17 = (;Ta = 10,
+		    Ts = 0.6,
+		    δω = 0.06,
+		    νг = t -> t >= 0 ? -1 : 0.0,
+		    tspan = (0.0, 10.0)
+		  )
+
 # ╔═╡ 9fd039b8-033f-4bf3-9eca-1101e6cfa678
-function simulate_system_ras()
-	(; Ta, Ts, δω, νг, tspan) = taskparams
+function simulate_system_ras(task)
+	(; Ta, Ts, δω, νг, tspan) = task
 	u0 = [0.0, 0.0]
 
     function system!(du, u, p, t)
@@ -44,8 +44,8 @@ function simulate_system_ras()
 end
 
 # ╔═╡ 94f52d33-836c-4aa2-a110-2f31105dc693
-function simulate_system_cor(T1 = 0.2, T2 = 0.02 )
-	(; Ta, Ts, δω, νг, tspan) = taskparams
+function simulate_system_cor(task, T₁, T₂)
+	(; Ta, Ts, δω, νг, tspan) = task
 	u0  = [0.0, 0.0, 0.0]
 
     function system!(du, u, p, t)
@@ -53,19 +53,16 @@ function simulate_system_cor(T1 = 0.2, T2 = 0.02 )
         σ = -φ / δω
         du[1] = (ξ - νг(t)) / Ta
         du[2] = (η - ξ    ) / Ts
-        du[3] = ( -T1 * du[1] / δω + σ - η) / T2
+        du[3] = ( -T₁ * du[1] / δω + σ - η) / T₂
     end
 
     prob = ODEProblem(system!, u0, tspan)
     solve(prob, Tsit5(), reltol=1e-6, abstol=1e-6)
 end
 
-# ╔═╡ c02ff179-6e38-4802-bbf1-24427fc7836a
-begin
-    log_ω̄ = range(log(2), log(30π), length=500)
-    ω̄ = exp.(log_ω̄)
-
-	W_ras(ω) = 1 / ( taskparams.δω * taskparams.Ta * ω * im * (taskparams.Ts * ω * im + 1) )
+# ╔═╡ 74aea461-1266-45cb-88bc-fb4a9fd37add
+function calc(task, ω̄)
+	W_ras(ω) = 1 / ( task.δω * task.Ta * im*ω * (task.Ts * im*ω + 1) )
 	val_ras = W_ras.(ω̄)
 
     i_ras = argmin(abs.(abs.(val_ras) .- 1))
@@ -73,7 +70,7 @@ begin
 
 	γ_ras = round(180 + rad2deg(angle(val_ras[i_ras])))
 
-	T₁ = 1/ ω_ras
+	T₁ = 1 / ω_ras
 	T₂ = 0.1T₁
 
 	W_cor(ω) = W_ras(ω) * (T₁ * im*ω + 1) / (T₂ * im*ω + 1)
@@ -84,19 +81,18 @@ begin
 
 	γ_cor = round(180 + rad2deg(angle(val_cor[i_cor])))
 
-	md"# Вычисления"
+	(; val_ras, i_ras, ω_ras, γ_ras, T₁, T₂, val_cor, i_cor, ω_cor, γ_cor)
 end
 
-# ╔═╡ de938d30-5a8c-426d-b385-047ff55fcda4
-with_theme(theme_latexfonts()) do
-	sol_ras = simulate_system_ras()
-	sol_cor = simulate_system_cor(T₁, T₂,)
-		
-	f = Figure(size = (800,400))
-	ax = Axis(f[1, 1])
-	plot!(ax, sol_ras, idxs=1)
-	plot!(ax, sol_cor, idxs=1, color = :red)
-	f
+# ╔═╡ c02ff179-6e38-4802-bbf1-24427fc7836a
+begin
+    log_ω̄ = range(log(1), log(30π), length=1000)
+    ω̄ = exp.(log_ω̄)
+
+	data_3  = calc(task_3 , ω̄)
+	data_17 = calc(task_17, ω̄)
+
+	md"# Вычисления"
 end
 
 # ╔═╡ 4495d236-b15c-44d4-ba2c-8ced7293fa00
@@ -138,34 +134,36 @@ function polaroid(values, ind)
 end
 
 # ╔═╡ eacf2f85-c96c-42ca-9dcc-9d8469362345
-polaroid(val_ras, i_ras)
+polaroid(data_3.val_ras, data_3.i_ras)
 
 # ╔═╡ 145afb2b-b385-4f6f-bda3-ede01e78e895
-polaroid(val_cor, i_cor)
+polaroid(data_3.val_cor, data_3.i_cor)
 
-# ╔═╡ 74aea461-1266-45cb-88bc-fb4a9fd37add
-function calc(task, ω̄ = ω̄)
-	W_ras(ω) = 1/(task.δω*task.Ta * im*ω * (taskparams.Ts * im*ω + 1))
-	val_ras = W_ras.(ω̄)
+# ╔═╡ 696e258d-acb9-4dfd-a38e-73a2a867e84d
+polaroid(data_17.val_ras, data_17.i_ras)
 
-    i_ras = argmin(abs.(abs.(val_ras) .- 1))
-	ω_ras = ω̄[i_ras]
+# ╔═╡ c9c16030-5b6a-4e43-a377-2efb7c8950d2
+polaroid(data_17.val_cor, data_17.i_cor)
 
-	γ_ras = round(180 + rad2deg(angle(val_ras[i_ras])))
-
-	T₁ = 1 / ω_ras
-	T₂ = 0.1T₁
-
-	W_cor(ω) = W_ras(ω) * (T₁ * im*ω + 1) / (T₂ * im*ω + 1)
-	val_cor = W_cor.(ω̄)
-
-	i_cor = argmin(abs.(abs.(val_cor) .- 1))
-	ω_cor = ω̄[i_cor]
-
-	γ_cor = round(180 + rad2deg(angle(val_cor[i_cor])))
-
-	(; val_ras, i_ras, ω_ras, γ_ras, T₁, T₂, val_cor, i_cor, ω_cor, γ_cor)
+# ╔═╡ 07e11473-b9e7-4a6e-9561-c85d63fe559b
+function plotter(task, data)
+	with_theme(theme_latexfonts()) do
+		sol_ras = simulate_system_ras(task)
+		sol_cor = simulate_system_cor(task, data.T₁, data.T₂,)
+		
+		f = Figure(size = (800,400))
+		ax = Axis(f[1, 1])
+		plot!(ax, sol_ras, idxs=1)
+		plot!(ax, sol_cor, idxs=1, color = :red)
+		f
+	end
 end
+
+# ╔═╡ 747e2dec-b463-421d-926e-94dff0bcdebd
+plotter(task_3, data_3)
+
+# ╔═╡ 350aaaa7-f407-496b-8c6a-e375cf070cce
+plotter(task_17, data_17)
 
 # ╔═╡ a72f705b-eeaa-45cb-8854-8b17b73d4b07
 # ╠═╡ disabled = true
@@ -3024,17 +3022,21 @@ version = "3.5.0+0"
 """
 
 # ╔═╡ Cell order:
-# ╠═098273ae-0777-11f0-1293-513a49ace68d
-# ╠═274fcf6a-921f-413b-94cd-c3eded49de0a
+# ╟─098273ae-0777-11f0-1293-513a49ace68d
+# ╟─274fcf6a-921f-413b-94cd-c3eded49de0a
 # ╟─ac30ea21-4f15-4dce-ae35-fb2957637b58
 # ╟─9fd039b8-033f-4bf3-9eca-1101e6cfa678
 # ╟─94f52d33-836c-4aa2-a110-2f31105dc693
 # ╠═c02ff179-6e38-4802-bbf1-24427fc7836a
 # ╟─eacf2f85-c96c-42ca-9dcc-9d8469362345
 # ╟─145afb2b-b385-4f6f-bda3-ede01e78e895
-# ╠═de938d30-5a8c-426d-b385-047ff55fcda4
-# ╟─4495d236-b15c-44d4-ba2c-8ced7293fa00
+# ╟─747e2dec-b463-421d-926e-94dff0bcdebd
+# ╟─696e258d-acb9-4dfd-a38e-73a2a867e84d
+# ╟─c9c16030-5b6a-4e43-a377-2efb7c8950d2
+# ╟─350aaaa7-f407-496b-8c6a-e375cf070cce
 # ╠═74aea461-1266-45cb-88bc-fb4a9fd37add
+# ╟─4495d236-b15c-44d4-ba2c-8ced7293fa00
+# ╟─07e11473-b9e7-4a6e-9561-c85d63fe559b
 # ╟─a72f705b-eeaa-45cb-8854-8b17b73d4b07
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
