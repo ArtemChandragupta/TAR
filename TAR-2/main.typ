@@ -100,14 +100,14 @@ $
         Tπ = 0.4,
         Ts = 0.7,
         δω = 0.12,
-        ηг = t -> t >= 0 ? -1 : 0.0,
+        νг = t -> t >= 0 ? -1 : 0.0,
         u0  = [0.0, 0.0, 0.0],
         tspan = (0.0, 30.0)
     )
         function system!(du, u, p, t)
             φ, π, ξ = u
             η = -φ / δω
-            du[1] = (π - ηг(t)) / Ta
+            du[1] = (π - νг(t)) / Ta
             du[2] = (ξ - π    ) / Tπ
             du[3] = (η - ξ    ) / Ts
         end
@@ -150,14 +150,14 @@ $ W(lambda) = K / (T^2 lambda^2 + 2 zeta T lambda + 1), $
     ```julia
       function simulate_oscillatory_link(;
           K, ζ, T,
-      	  ηг = t -> t >= 0 ? -1 : 0.0,
+      	  νг = t -> t >= 0 ? -1 : 0.0,
       	  u0 = [0,0],
           tspan = (0.0, 20.0)
       )
           function oscillatory_link!(du, u, p, t)
               φ, dφ = u
               du[1] = dφ
-              du[2] = (-K*ηг(t) - 2ζ*T*dφ - φ) / T^2
+              du[2] = (-K*νг(t) - 2ζ*T*dφ - φ) / T^2
           end
 
           prob = ODEProblem(oscillatory_link!, u0, tspan)

@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.13
+# v0.20.18
 
 using Markdown
 using InteractiveUtils
@@ -18,7 +18,7 @@ param_labels = Dict(
     :Tπ => L"T_\pi",
     :Ts => L"T_s",
 	:δω => L"\delta_\omega",
-    :ηг => L"\eta_{\text{г}}",
+    :νг => L"\nu_{\text{г}}",
     :u0 => L"u_0",
     :tspan => L"t_{\text{span}}"
 )
@@ -29,14 +29,14 @@ function simulate_system(;
     Tπ = 0.4,
     Ts = 0.7,
     δω = 0.12,
-	ηг = t -> t >= 2 ? -1 : 0.0,
+	νг = t -> t >= 2 ? -1 : 0.0,
 	u0  = [0.0, 0.0, 0.0],
     tspan = (0.0, 30.0)
 )
     function system!(du, u, p, t)
         φ, π, ξ = u
         η = -φ / δω
-        du[1] = (π - ηг(t)) / Ta
+        du[1] = (π - νг(t)) / Ta
         du[2] = (ξ - π    ) / Tπ
         du[3] = (η - ξ    ) / Ts
     end
@@ -134,7 +134,7 @@ function build_surface(;
         :Tπ => L"T_\pi",
         :Ts => L"T_s",
         :δω => L"\delta_\omega",
-        :ηг => L"\eta_{\text{г}}",
+        :νг => L"\nu_{\text{г}}",
         :u0 => L"u_0",
         :tspan => L"t_{\text{span}}"
     )
@@ -263,21 +263,6 @@ plot_unified(
 	param_values=range(0.08, 0.16, length=150)
 )
 
-# ╔═╡ bd9e9493-2cfa-4e4f-8b2a-087885dffa3e
-begin
-	open("data.typ", "w") do file
-   		write(file, "#let datasolt = (\n (")
-   		for i in 1:length(sol_test_t)
-    		write(file, "  $(sol_test_t[i]),")
-    	end
-		write(file, "), \n (")
-		for i in 1:length(sol_test_f)
-    		write(file, "  $(sol_test_f[i]),")
-    	end
-    	write(file, ") ) \n")
-	end
-end
-
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
@@ -297,7 +282,7 @@ LaTeXStrings = "~1.4.0"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.11.6"
+julia_version = "1.11.7"
 manifest_format = "2.0"
 project_hash = "483ec21cb62202cc5d2ae090c4d6f4ea1beb6092"
 
@@ -3060,6 +3045,5 @@ version = "3.6.0+0"
 # ╠═52a601f6-9ae1-4d6f-ac02-37d4f70da09b
 # ╠═1faeabea-e69f-4d85-afa5-e0a650c256ad
 # ╠═d606b032-c06a-4082-ba2d-98126b60fec4
-# ╠═bd9e9493-2cfa-4e4f-8b2a-087885dffa3e
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

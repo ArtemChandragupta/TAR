@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.13
+# v0.20.18
 
 using Markdown
 using InteractiveUtils
@@ -13,22 +13,22 @@ end
 
 # ╔═╡ 274fcf6a-921f-413b-94cd-c3eded49de0a
 taskparams = (;Ta = 7,
-			  Tπ = 0.4,
-			  Ts = 0.7,
-			  δω = 0.12,
-			  ηг = t -> t >= 0 ? -1 : 0.0,
-			  u0  = [0.0, 0.0, 0.0],
-			  tspan = (0.0, 20.0)
+			   Tπ = 0.4,
+			   Ts = 0.7,
+			   δω = 0.12,
+			   νг = t -> t >= 0 ? -1 : 0.0,
+			   u0 = [0.0, 0.0, 0.0],
+			   tspan = (0.0, 20.0)
 			 )
 
 # ╔═╡ 9fd039b8-033f-4bf3-9eca-1101e6cfa678
 function simulate_system()
-	(; Ta, Tπ, Ts, δω, ηг, u0, tspan) = taskparams
+	(; Ta, Tπ, Ts, δω, νг, u0, tspan) = taskparams
 	
     function system!(du, u, p, t)
         φ, π, ξ = u
         η = -φ / δω
-        du[1] = (π - ηг(t)) / Ta
+        du[1] = (π - νг(t)) / Ta
         du[2] = (ξ - π    ) / Tπ
         du[3] = (η - ξ    ) / Ts
     end
@@ -43,7 +43,7 @@ function simulate_system_W_old(;
     Tπ = 0.4,
     Ts = 0.7,
     δω = 0.12,
-	ηг = t -> t >= 0 ? -1 : 0.0,
+	νг = t -> t >= 0 ? -1 : 0.0,
 	u0  = [0.0, 0.0, 0.0],
     tspan = (0.0, 20.0)
 )
@@ -51,7 +51,7 @@ function simulate_system_W_old(;
         φ, dφ, d2φ = u
         du[1] = dφ
 		du[2] = d2φ
-        du[3] = -1/(Ta * Tπ * Ts) * ηг(t) - (Tπ+Ts) / (Tπ * Ts) * d2φ - dφ / (Tπ * Ts) - φ/(δω * Ta * Tπ * Ts)
+        du[3] = -1/(Ta * Tπ * Ts) * νг(t) - (Tπ+Ts) / (Tπ * Ts) * d2φ - dφ / (Tπ * Ts) - φ/(δω * Ta * Tπ * Ts)
 	end
 	
     prob = ODEProblem(system!, u0, tspan)
@@ -84,14 +84,14 @@ end
 # ╔═╡ 3f41822d-898c-4153-a773-4ea43a98edb6
 function simulate_oscillatory_link(;
     K, ζ, T,
-	ηг = t -> t >= 0 ? -1 : 0.0,
+	νг = t -> t >= 0 ? -1 : 0.0,
 	u0 = [0,0],
     tspan = (0.0, 20.0)
 )
     function oscillatory_link!(du, u, p, t)
         φ, dφ = u
         du[1] = dφ
-        du[2] = (-K*ηг(t) - 2ζ*T*dφ - φ) / T^2
+        du[2] = (-K*νг(t) - 2ζ*T*dφ - φ) / T^2
     end
 
     prob = ODEProblem(oscillatory_link!, u0, tspan)
@@ -101,14 +101,14 @@ end
 # ╔═╡ 3801b4c4-8903-4a58-b0b2-832f84811434
 function simulate_oscillatory_link_W(;
     K, ζ, T,
-	ηг = t -> t >= 0 ? -1 : 0.0,
+	νг = t -> t >= 0 ? -1 : 0.0,
     u0 = [0.0, 0.12],
     tspan = (0.0, 20.0)
 )
     function oscillatory_link!(du, u, p, t)
         φ, dφ = u
         du[1] = dφ
-        du[2] = (-K*ηг(t) - 2ζ*T*dφ - φ) / T^2
+        du[2] = (-K*νг(t) - 2ζ*T*dφ - φ) / T^2
     end
 
     prob = ODEProblem(oscillatory_link!, u0, tspan)
@@ -226,7 +226,7 @@ LaTeXStrings = "~1.4.0"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.11.6"
+julia_version = "1.11.7"
 manifest_format = "2.0"
 project_hash = "ebc5f55514b1999b3c3291795516d359d378cbd2"
 
@@ -3004,10 +3004,10 @@ version = "3.5.0+0"
 # ╟─098273ae-0777-11f0-1293-513a49ace68d
 # ╠═274fcf6a-921f-413b-94cd-c3eded49de0a
 # ╠═9fd039b8-033f-4bf3-9eca-1101e6cfa678
-# ╟─e36ad3ec-3c32-4a6c-a9e4-3fd317e100b6
-# ╟─dae83640-5e22-4912-8946-3a03a9235b51
-# ╟─3f41822d-898c-4153-a773-4ea43a98edb6
-# ╟─3801b4c4-8903-4a58-b0b2-832f84811434
+# ╠═e36ad3ec-3c32-4a6c-a9e4-3fd317e100b6
+# ╠═dae83640-5e22-4912-8946-3a03a9235b51
+# ╠═3f41822d-898c-4153-a773-4ea43a98edb6
+# ╠═3801b4c4-8903-4a58-b0b2-832f84811434
 # ╠═42bee866-f155-47af-b122-e4197f15b1e6
 # ╠═de938d30-5a8c-426d-b385-047ff55fcda4
 # ╠═a72f705b-eeaa-45cb-8854-8b17b73d4b07
