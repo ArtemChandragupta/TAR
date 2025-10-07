@@ -46,7 +46,7 @@ end
 # ╔═╡ 94f52d33-836c-4aa2-a110-2f31105dc693
 function simulate_system_cor(task, T₁, T₂)
 	(; Ta, Ts, δω, νг, tspan) = task
-	u0  = [0.0, 0.0, 0.0]
+	u0 = [0.0, 0.0, 0.0]
 
     function system!(du, u, p, t)
         φ, ξ, η = u
@@ -103,11 +103,10 @@ function polaroid(values, ind, name)
 		
         fig = Figure()
         ax = PolarAxis(fig[1, 1],
-					   #rminorticksvisible = true,
-					   rticks  = [ 0.5, 1],
+					   rticks  = [0.5, 1],
 					   rlimits = (0, 1.3),
-					   spinevisible = false,
-					   #thetalimits = (π, 1.5π)
+					   #thetalimits = (pi, 3pi/2),
+					   spinevisible = false
 					  )
 		
 		# Единичная окружность
@@ -115,24 +114,42 @@ function polaroid(values, ind, name)
 
 		# Дуга угла γ
 		lines!(ax, range(θ_cp, -π, length=50), fill(1.1, 50), color = :black, linewidth = 1)
-		text!( ax, θ_cp/2 - π/2, 1.1, rotation = θ_cp/2, align = (:center, :top), text = L"\gamma = %$(round(Int, 180 + rad2deg(θ_cp))) \degree" )
+		text!( ax, θ_cp/2 - π/2, 1.1, rotation = θ_cp/2, align = (:center, :top),
+			   text = L"\gamma = %$(round(Int, 180 + rad2deg(θ_cp))) \degree" 
+			 )
 
 		# Линия фазы
 		lines!(ax, fill(θ_cp, 2), [0,1.3],    color=:black, linewidth=1)
 		# Линия амплитуды
 		lines!(ax, [θ_cp, π], [1,-cos(θ_cp)], color=:black, linewidth=1)
 		# Скобка для 1/m
-		bracket!(π, -cos(θ_cp), 0, 0, color =:black, linewidth =1, text = L"\frac{1}{m}", fontsize = 12, textoffset = 12)
+		bracket!(π, -cos(θ_cp), 0, 0,         color=:black, linewidth=1,
+				 text = L"\frac{1}{m}", fontsize = 12, textoffset = 12
+				)
 
 		# Собственно график
-		# lines!(ax, angle.(values), abs.(values))
-		plot_data = scatterlines!(ax, angle.(values), abs.(values), markersize = 4)
+		plot_data = lines!(ax, angle.(values), abs.(values),
+						   color      = ω̄[1:length(values)],
+						   colorscale = Makie.pseudolog10,
+						   linewidth  = 2
+						  )
 
-		Colorbar(fig[1, 2], plot_data)
+		Colorbar(fig[1, 2], plot_data, 
+				 minorticksvisible = true,
+				 ticks = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89],
+				 label = L"\omega_{cp}"
+				)
 
 		# Точка среза
-		scatter!(ax, [θ_cp],[r_cp], color = Makie.wong_colors(1), markersize = 10 )
-		tooltip!(ax, θ_cp,r_cp, text = L"\omega_{cp} = %$(round(ω̄[ind], digits = 2))", placement = :right, outline_linewidth = 1, overdraw = true)
+		scatter!(ax, [θ_cp],[r_cp], markersize = 10,
+				 color      = ω̄[ind],
+				 colorscale = Makie.pseudolog10,
+				 colorrange = (minimum(ω̄[1:length(values)]), maximum(ω̄[1:length(values)]))
+				)
+		tooltip!(ax, θ_cp,r_cp,
+				 text = L"\omega_{cp} = %$(round(ω̄[ind], digits = 2))",
+				 placement = :right, outline_linewidth = 1, overdraw = true
+				)
 
 		save("assets/$(name).png", fig)
 
@@ -159,10 +176,19 @@ function plotter(task, data, name)
 		sol_cor = simulate_system_cor(task, data.T₁, data.T₂,)
 		
 		fig = Figure(size = (800,400))
-		ax = Axis(fig[1, 1])
+		ax = Axis(fig[1, 1],
+				  ylabel = L"\varphi(t)",
+				  xlabel = L"t, c",
+				  xminorticksvisible = true, xminorgridvisible = true,
+				  xminorticks = IntervalsBetween(10),
+				  yminorticksvisible = true, yminorgridvisible = true,
+				  # yminorticks = IntervalsBetween(10),
+				 )
 		
-		plot!(ax, sol_ras, idxs=1)
-		plot!(ax, sol_cor, idxs=1, color = :red)
+		plot!(ax, sol_ras, idxs=1, label = L"Располагаемая \ система")
+		plot!(ax, sol_cor, idxs=1, label = L"Скорректированная \ система", color = :red)
+
+		axislegend()
 		
 		save("assets/$(name).svg", fig)
 		
@@ -176,86 +202,27 @@ plotter(task_3, data_3, "plot_3")
 # ╔═╡ 350aaaa7-f407-496b-8c6a-e375cf070cce
 plotter(task_17, data_17, "plot_17")
 
-# ╔═╡ 3ad48b2e-55f1-4abd-811e-263c9a687be7
-begin
-	f = Figure(size = (800, 500))
-	
-	ax = PolarAxis(f[1, 1], title = "Surface")
-	rs = 0:10
-	phis = range(0, 2pi, 37)
-	cs = [r+cos(4phi) for phi in phis, r in rs]
-	p = surface!(ax, 0..2pi, 0..10, zeros(size(cs)), color = cs, shading = NoShading, colormap = :coolwarm)
-	ax.gridz = 100
-	tightlimits!(ax) # surface plots include padding by default
-	#Colorbar(f[2, 1], p, vertical = false, flipaxis = false)
-	
-	f
-end
-
 # ╔═╡ a72f705b-eeaa-45cb-8854-8b17b73d4b07
-# ╠═╡ disabled = true
-#=╠═╡
 begin
-	tsol = sol.t
-	phisol = sol[1, :]
-	tosc = osc.t
-	phiosc = osc[1, :]
-	toscW = oscW.t
-	phioscW = oscW[1, :]
-
 	open("data.typ", "w") do file
 		write(file,
-			  "#let K = $(taskparams.δω) \n
-			   #let ζ = $(pζ) \n
-			   #let T = $(pT) \n
-			   #let a = $(α) \n
-			   #let ome = $(ω) \n
-			   #let A1 = $(A₁) \n
-			   #let A2 = $(A₂) \n
-			  
-			   #let Tmax = $(sol.t[max_idx]) \n
-			   #let Tmin = $(sol.t[max_idx + min_idx - 1]) \n
-			   #let Pmax = $(max_phi) \n
-			   #let Pmin = $(min_phi) \n
-			  
-			   #let Tmax_osc = $(osc.t[max_idx_osc]) \n
-			   #let Tmin_osc = $(osc.t[max_idx_osc + min_idx_osc - 1]) \n
-			   #let Pmax_osc = $(max_phi_osc) \n
-			   #let Pmin_osc = $(min_phi_osc) \n
+			  "#let w-ras-1 = $(round(digits = 2, data_3.ω_ras))
+#let g-ras-1 = $(round(digits = 2, data_3.γ_ras))
+#let T-1-1   = $(round(digits = 2, data_3.T₁))
+#let T-2-1   = $(round(digits = 2, data_3.T₂))
+#let w-cor-1 = $(round(digits = 2, data_3.ω_cor))
+#let g-cor-1 = $(round(digits = 2, data_3.γ_cor))
+#let w-ras-2 = $(round(digits = 2, data_17.ω_ras))
+#let g-ras-2 = $(round(digits = 2, data_17.γ_ras))
+#let T-1-2   = $(round(digits = 2, data_17.T₁))
+#let T-2-2   = $(round(digits = 2, data_17.T₂))
+#let w-cor-2 = $(round(digits = 2, data_17.ω_cor))
+#let g-cor-2 = $(round(digits = 2, data_17.γ_cor))
 			  ")
-		
-   		write(file, "#let datasol = (\n (")
-   		for i in 1:length(tsol)
-    		write(file, "  $(tsol[i]),")
-    	end
-		write(file, "), \n (")
-		for i in 1:length(phisol)
-    		write(file, "  $(phisol[i]),")
-    	end
-    	write(file, ") ) \n")
-
-		write(file, "#let dataosc = (\n (")
-   		for i in 1:length(tosc)
-    		write(file, "  $(tosc[i]),")
-    	end
-		write(file, "), \n (")
-		for i in 1:length(phiosc)
-    		write(file, "  $(phiosc[i]),")
-    	end
-    	write(file, ") ) \n")
-
-		write(file, "#let dataoscW = (\n (")
-   		for i in 1:length(toscW)
-    		write(file, "  $(toscW[i]),")
-    	end
-		write(file, "), \n (")
-		for i in 1:length(phioscW)
-    		write(file, "  $(phioscW[i]),")
-    	end
-    	write(file, ") ) \n")
 	end
+
+	md"# Запись в файл"
 end
-  ╠═╡ =#
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -3061,10 +3028,9 @@ version = "3.5.0+0"
 # ╟─696e258d-acb9-4dfd-a38e-73a2a867e84d
 # ╟─c9c16030-5b6a-4e43-a377-2efb7c8950d2
 # ╟─350aaaa7-f407-496b-8c6a-e375cf070cce
-# ╟─74aea461-1266-45cb-88bc-fb4a9fd37add
-# ╠═4495d236-b15c-44d4-ba2c-8ced7293fa00
-# ╠═07e11473-b9e7-4a6e-9561-c85d63fe559b
-# ╠═3ad48b2e-55f1-4abd-811e-263c9a687be7
-# ╟─a72f705b-eeaa-45cb-8854-8b17b73d4b07
+# ╠═74aea461-1266-45cb-88bc-fb4a9fd37add
+# ╟─4495d236-b15c-44d4-ba2c-8ced7293fa00
+# ╟─07e11473-b9e7-4a6e-9561-c85d63fe559b
+# ╠═a72f705b-eeaa-45cb-8854-8b17b73d4b07
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
