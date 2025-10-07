@@ -96,74 +96,101 @@ begin
 end
 
 # ╔═╡ 4495d236-b15c-44d4-ba2c-8ced7293fa00
-function polaroid(values, ind)
+function polaroid(values, ind, name)
 	with_theme(theme_latexfonts()) do
 		θ_cp = angle(values[ind])
 		r_cp = abs(  values[ind])
 		
-        f = Figure()
-        ax = PolarAxis(f[1, 1],
+        fig = Figure()
+        ax = PolarAxis(fig[1, 1],
 					   #rminorticksvisible = true,
 					   rticks  = [ 0.5, 1],
-					   rlimits = (0, 1.3)
+					   rlimits = (0, 1.3),
+					   spinevisible = false,
+					   #thetalimits = (π, 1.5π)
 					  )
 		
 		# Единичная окружность
 		scatter!(ax, π, 1, color = :red, markersize=10)
 
 		# Дуга угла γ
-		lines!(ax, range(θ_cp, -π, length=50), fill(1.1, 50), color = :gray, linewidth = 1)
+		lines!(ax, range(θ_cp, -π, length=50), fill(1.1, 50), color = :black, linewidth = 1)
 		text!( ax, θ_cp/2 - π/2, 1.1, rotation = θ_cp/2, align = (:center, :top), text = L"\gamma = %$(round(Int, 180 + rad2deg(θ_cp))) \degree" )
 
 		# Линия фазы
-		lines!(ax, fill(θ_cp, 2), [0,1.3],    color =:gray, linewidth=1)
+		lines!(ax, fill(θ_cp, 2), [0,1.3],    color=:black, linewidth=1)
 		# Линия амплитуды
-		lines!(ax, [θ_cp, π], [1,-cos(θ_cp)], color =:gray, linewidth=1)
+		lines!(ax, [θ_cp, π], [1,-cos(θ_cp)], color=:black, linewidth=1)
 		# Скобка для 1/m
-		bracket!(π, -cos(θ_cp), 0, 0, color =:gray, linewidth =1, text = L"\frac{1}{m}", fontsize = 12, textoffset = 12)
+		bracket!(π, -cos(θ_cp), 0, 0, color =:black, linewidth =1, text = L"\frac{1}{m}", fontsize = 12, textoffset = 12)
 
 		# Собственно график
-		lines!(ax, angle.(values), abs.(values))
+		# lines!(ax, angle.(values), abs.(values))
+		plot_data = scatterlines!(ax, angle.(values), abs.(values), markersize = 4)
+
+		Colorbar(fig[1, 2], plot_data)
 
 		# Точка среза
 		scatter!(ax, [θ_cp],[r_cp], color = Makie.wong_colors(1), markersize = 10 )
-		tooltip!(ax, θ_cp,r_cp, text = L"\omega_{cp} = %$(round(ω̄[ind], digits = 2))", placement = :right, outline_linewidth = 1, )
+		tooltip!(ax, θ_cp,r_cp, text = L"\omega_{cp} = %$(round(ω̄[ind], digits = 2))", placement = :right, outline_linewidth = 1, overdraw = true)
 
-        f
+		save("assets/$(name).png", fig)
+
+        fig
     end
 end
 
 # ╔═╡ eacf2f85-c96c-42ca-9dcc-9d8469362345
-polaroid(data_3.val_ras, data_3.i_ras)
+polaroid(data_3.val_ras, data_3.i_ras, "pol_ras_3")
 
 # ╔═╡ 145afb2b-b385-4f6f-bda3-ede01e78e895
-polaroid(data_3.val_cor, data_3.i_cor)
+polaroid(data_3.val_cor, data_3.i_cor, "pol_cor_3")
 
 # ╔═╡ 696e258d-acb9-4dfd-a38e-73a2a867e84d
-polaroid(data_17.val_ras, data_17.i_ras)
+polaroid(data_17.val_ras, data_17.i_ras, "pol_ras_17")
 
 # ╔═╡ c9c16030-5b6a-4e43-a377-2efb7c8950d2
-polaroid(data_17.val_cor, data_17.i_cor)
+polaroid(data_17.val_cor, data_17.i_cor, "pol_cor_17")
 
 # ╔═╡ 07e11473-b9e7-4a6e-9561-c85d63fe559b
-function plotter(task, data)
+function plotter(task, data, name)
 	with_theme(theme_latexfonts()) do
 		sol_ras = simulate_system_ras(task)
 		sol_cor = simulate_system_cor(task, data.T₁, data.T₂,)
 		
-		f = Figure(size = (800,400))
-		ax = Axis(f[1, 1])
+		fig = Figure(size = (800,400))
+		ax = Axis(fig[1, 1])
+		
 		plot!(ax, sol_ras, idxs=1)
 		plot!(ax, sol_cor, idxs=1, color = :red)
-		f
+		
+		save("assets/$(name).svg", fig)
+		
+		fig
 	end
 end
 
 # ╔═╡ 747e2dec-b463-421d-926e-94dff0bcdebd
-plotter(task_3, data_3)
+plotter(task_3, data_3, "plot_3")
 
 # ╔═╡ 350aaaa7-f407-496b-8c6a-e375cf070cce
-plotter(task_17, data_17)
+plotter(task_17, data_17, "plot_17")
+
+# ╔═╡ 3ad48b2e-55f1-4abd-811e-263c9a687be7
+begin
+	f = Figure(size = (800, 500))
+	
+	ax = PolarAxis(f[1, 1], title = "Surface")
+	rs = 0:10
+	phis = range(0, 2pi, 37)
+	cs = [r+cos(4phi) for phi in phis, r in rs]
+	p = surface!(ax, 0..2pi, 0..10, zeros(size(cs)), color = cs, shading = NoShading, colormap = :coolwarm)
+	ax.gridz = 100
+	tightlimits!(ax) # surface plots include padding by default
+	#Colorbar(f[2, 1], p, vertical = false, flipaxis = false)
+	
+	f
+end
 
 # ╔═╡ a72f705b-eeaa-45cb-8854-8b17b73d4b07
 # ╠═╡ disabled = true
@@ -3034,9 +3061,10 @@ version = "3.5.0+0"
 # ╟─696e258d-acb9-4dfd-a38e-73a2a867e84d
 # ╟─c9c16030-5b6a-4e43-a377-2efb7c8950d2
 # ╟─350aaaa7-f407-496b-8c6a-e375cf070cce
-# ╠═74aea461-1266-45cb-88bc-fb4a9fd37add
-# ╟─4495d236-b15c-44d4-ba2c-8ced7293fa00
-# ╟─07e11473-b9e7-4a6e-9561-c85d63fe559b
+# ╟─74aea461-1266-45cb-88bc-fb4a9fd37add
+# ╠═4495d236-b15c-44d4-ba2c-8ced7293fa00
+# ╠═07e11473-b9e7-4a6e-9561-c85d63fe559b
+# ╠═3ad48b2e-55f1-4abd-811e-263c9a687be7
 # ╟─a72f705b-eeaa-45cb-8854-8b17b73d4b07
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
