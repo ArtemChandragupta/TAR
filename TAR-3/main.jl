@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.18
+# v0.20.19
 
 using Markdown
 using InteractiveUtils
@@ -105,7 +105,6 @@ function polaroid(values, ind, name)
         ax = PolarAxis(fig[1, 1],
 					   rticks  = [0.5, 1],
 					   rlimits = (0, 1.3),
-					   #thetalimits = (pi, 3pi/2),
 					   spinevisible = false
 					  )
 		
@@ -121,11 +120,11 @@ function polaroid(values, ind, name)
 		# Линия фазы
 		lines!(ax, fill(θ_cp, 2), [0,1.3],    color=:black, linewidth=1)
 		# Линия амплитуды
-		lines!(ax, [θ_cp, π], [1,-cos(θ_cp)], color=:black, linewidth=1)
+		# lines!(ax, [θ_cp, π], [1,-cos(θ_cp)], color=:black, linewidth=1)
 		# Скобка для 1/m
-		bracket!(π, -cos(θ_cp), 0, 0,         color=:black, linewidth=1,
-				 text = L"\frac{1}{m}", fontsize = 12, textoffset = 12
-				)
+		# bracket!(π, -cos(θ_cp), 0, 0,         color=:black, linewidth=1,
+		# 		 text = L"\frac{1}{m}", fontsize = 12, textoffset = 12
+		# 		)
 
 		# Собственно график
 		plot_data = lines!(ax, angle.(values), abs.(values),
@@ -3029,7 +3028,7 @@ version = "3.5.0+0"
 # ╟─c9c16030-5b6a-4e43-a377-2efb7c8950d2
 # ╟─350aaaa7-f407-496b-8c6a-e375cf070cce
 # ╠═74aea461-1266-45cb-88bc-fb4a9fd37add
-# ╟─4495d236-b15c-44d4-ba2c-8ced7293fa00
+# ╠═4495d236-b15c-44d4-ba2c-8ced7293fa00
 # ╟─07e11473-b9e7-4a6e-9561-c85d63fe559b
 # ╠═a72f705b-eeaa-45cb-8854-8b17b73d4b07
 # ╟─00000000-0000-0000-0000-000000000001
