@@ -12,53 +12,12 @@ begin
 end
 
 # ╔═╡ 274fcf6a-921f-413b-94cd-c3eded49de0a
-task_3 = (;Ta = 5,
-		   Ts = 0.4,
-		   δω = 0.06,
-		   νг = t -> t >= 0 ? -1 : 0.0,
-		   tspan = (0.0, 10.0)
-		 )
-
-# ╔═╡ ac30ea21-4f15-4dce-ae35-fb2957637b58
-task_17 = (;Ta = 10,
-		    Ts = 0.6,
-		    δω = 0.06,
-		    νг = t -> t >= 0 ? -1 : 0.0,
-		    tspan = (0.0, 10.0)
-		  )
-
-# ╔═╡ 9fd039b8-033f-4bf3-9eca-1101e6cfa678
-function simulate_system_ras(task)
-	(; Ta, Ts, δω, νг, tspan) = task
-	u0 = [0.0, 0.0]
-
-    function system!(du, u, p, t)
-        φ, ξ = u
-        σ = -φ / δω
-        du[1] = (ξ - νг(t)) / Ta
-        du[2] = (σ - ξ    ) / Ts
-    end
-
-    prob = ODEProblem(system!, u0, tspan)
-    solve(prob, Tsit5(), reltol=1e-6, abstol=1e-6)
-end
-
-# ╔═╡ 94f52d33-836c-4aa2-a110-2f31105dc693
-function simulate_system_cor(task, T₁, T₂)
-	(; Ta, Ts, δω, νг, tspan) = task
-	u0 = [0.0, 0.0, 0.0]
-
-    function system!(du, u, p, t)
-        φ, ξ, η = u
-        σ = -φ / δω
-        du[1] = (ξ - νг(t)) / Ta
-        du[2] = (η - ξ    ) / Ts
-        du[3] = ( -T₁ * du[1] / δω + σ - η) / T₂
-    end
-
-    prob = ODEProblem(system!, u0, tspan)
-    solve(prob, Tsit5(), reltol=1e-6, abstol=1e-6)
-end
+task = (; Ta = 5,
+		Ts = 0.4,
+		δω = 0.06,
+		νг = t -> t >= 0 ? -1 : 0.0,
+		tspan = (0.0, 10.0)
+	   )
 
 # ╔═╡ 01c779e6-97d4-4300-9e48-cc6001087591
 function simulate_system_P(task)
@@ -94,7 +53,7 @@ function simulate_system_PD(task, T₁, T₂)
 end
 
 # ╔═╡ 0563c01f-6ee3-4b4e-9cdb-06632a6ea4ae
-function simulate_system_PI(task, T₁, T₂)
+function simulate_system_PI(task, T₄)
 	(; Ta, Ts, δω, νг, tspan) = task
 	u0 = [0.0, 0.0, 0.0]
 
@@ -103,7 +62,7 @@ function simulate_system_PI(task, T₁, T₂)
         σ = -φ / δω
         du[1] = (ξ - νг(t)) / Ta
         du[2] = (η - ξ    ) / Ts
-        du[3] = ( -T₁ * du[1] / δω + σ - η) / T₂
+        du[3] = ( -T₄ * du[1] / δω + σ) / T₄
     end
 
     prob = ODEProblem(system!, u0, tspan)
@@ -111,6 +70,25 @@ function simulate_system_PI(task, T₁, T₂)
 end
 
 # ╔═╡ 4871420b-3efe-4165-b4d4-be0ed12b3640
+function simulate_system_I(task, T₄)
+	(; Ta, Ts, δω, νг, tspan) = task
+	u0 = [0.0, 0.0, 0.0]
+
+    function system!(du, u, p, t)
+        φ, ξ, η = u
+        σ = -φ / δω
+        du[1] = (ξ - νг(t)) / Ta
+        du[2] = (η - ξ    ) / Ts
+        du[3] = σ / T₄
+    end
+
+    prob = ODEProblem(system!, u0, tspan)
+    solve(prob, Tsit5(), reltol=1e-6, abstol=1e-6)
+end
+
+# ╔═╡ 0ab0f1d7-307e-4ed4-b855-e649537eb6da
+# ╠═╡ disabled = true
+#=╠═╡
 function simulate_system_PID(task, T₁, T₂)
 	(; Ta, Ts, δω, νг, tspan) = task
 	u0 = [0.0, 0.0, 0.0]
@@ -126,23 +104,30 @@ function simulate_system_PID(task, T₁, T₂)
     prob = ODEProblem(system!, u0, tspan)
     solve(prob, Tsit5(), reltol=1e-6, abstol=1e-6)
 end
+  ╠═╡ =#
 
-# ╔═╡ 0ab0f1d7-307e-4ed4-b855-e649537eb6da
-function simulate_system_I(task, T₁, T₂)
-	(; Ta, Ts, δω, νг, tspan) = task
-	u0 = [0.0, 0.0, 0.0]
+# ╔═╡ 83ecdeec-7def-4594-a692-738a24d15f99
+function simulate_system_PID(task, T₁, T₂, T₄)
+    (; Ta, Ts, δω, νг, tspan) = task
+    u0 = [0.0, 0.0, 0.0]
 
     function system!(du, u, p, t)
         φ, ξ, η = u
         σ = -φ / δω
         du[1] = (ξ - νг(t)) / Ta
-        du[2] = (η - ξ    ) / Ts
-        du[3] = ( -T₁ * du[1] / δω + σ - η) / T₂
+        du[2] = (η - ξ) / Ts
+        du[3] = (-T₁ * du[1] / δω + σ - η + T₄ * σ) / T₂
     end
 
     prob = ODEProblem(system!, u0, tspan)
     solve(prob, Tsit5(), reltol=1e-6, abstol=1e-6)
 end
+
+# ╔═╡ eacf2f85-c96c-42ca-9dcc-9d8469362345
+# polaroid(data.val_ras, data.i_ras, "pol_ras_3")
+
+# ╔═╡ 145afb2b-b385-4f6f-bda3-ede01e78e895
+# polaroid(data.val_cor, data.i_cor, "pol_cor_3")
 
 # ╔═╡ 74aea461-1266-45cb-88bc-fb4a9fd37add
 function calc(task, ω̄)
@@ -173,8 +158,7 @@ begin
     log_ω̄ = range(log(1), log(30π), length=1000)
     ω̄ = exp.(log_ω̄)
 
-	data_3  = calc(task_3 , ω̄)
-	data_17 = calc(task_17, ω̄)
+	data = calc(task, ω̄)
 
 	md"# Вычисления"
 end
@@ -240,30 +224,31 @@ function polaroid(values, ind, name)
     end
 end
 
-# ╔═╡ eacf2f85-c96c-42ca-9dcc-9d8469362345
-polaroid(data_3.val_ras, data_3.i_ras, "pol_ras_3")
-
-# ╔═╡ 145afb2b-b385-4f6f-bda3-ede01e78e895
-polaroid(data_3.val_cor, data_3.i_cor, "pol_cor_3")
-
 # ╔═╡ 07e11473-b9e7-4a6e-9561-c85d63fe559b
 function plotter(task, data, name)
 	with_theme(theme_latexfonts()) do
-		sol_ras = simulate_system_ras(task)
-		sol_cor = simulate_system_cor(task, data.T₁, data.T₂,)
+		sol_P  = simulate_system_P( task)
+		sol_PD = simulate_system_PD(task, data.T₁, data.T₂)
+		sol_I  = simulate_system_I( task, 0.002)
+		sol_PI = simulate_system_PI(task, 2)
+		sol_PID = simulate_system_PID(task, data.T₁, data.T₂, 2)
 		
 		fig = Figure(size = (800,400))
 		ax = Axis(fig[1, 1],
 				  ylabel = L"\varphi(t)",
 				  xlabel = L"t, c",
-				  xminorticksvisible = true, xminorgridvisible = true,
+				  xminorticksvisible = true,
+				  xminorgridvisible = true,
 				  xminorticks = IntervalsBetween(10),
-				  yminorticksvisible = true, yminorgridvisible = true,
-				  # yminorticks = IntervalsBetween(10),
+				  yminorticksvisible = true,
+				  yminorgridvisible = true,
 				 )
 		
-		plot!(ax, sol_ras, idxs=1, label = L"Располагаемая \ система")
-		plot!(ax, sol_cor, idxs=1, label = L"Скорректированная \ система", color = :red)
+		plot!(ax, sol_P, idxs=1, label = L"П")
+		plot!(ax, sol_PD, idxs=1, label = L"ПД", color = :red)
+		plot!(ax, sol_I, idxs=1, label = L"И", color = :green)
+		plot!(ax, sol_PI, idxs=1, label = L"ПИ", color = :blue)
+		plot!(ax, sol_PID, idxs=1, label = L"ПИД", color = :magenta)
 
 		axislegend()
 		
@@ -274,9 +259,11 @@ function plotter(task, data, name)
 end
 
 # ╔═╡ 747e2dec-b463-421d-926e-94dff0bcdebd
-plotter(task_3, data_3, "plot_3")
+plotter(task, data, "plot_3")
 
 # ╔═╡ a72f705b-eeaa-45cb-8854-8b17b73d4b07
+# ╠═╡ disabled = true
+#=╠═╡
 begin
 	open("data.typ", "w") do file
 		write(file,
@@ -297,6 +284,7 @@ begin
 
 	md"# Запись в файл"
 end
+  ╠═╡ =#
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -3131,21 +3119,19 @@ version = "4.1.0+0"
 # ╔═╡ Cell order:
 # ╟─098273ae-0777-11f0-1293-513a49ace68d
 # ╟─274fcf6a-921f-413b-94cd-c3eded49de0a
-# ╟─ac30ea21-4f15-4dce-ae35-fb2957637b58
-# ╟─9fd039b8-033f-4bf3-9eca-1101e6cfa678
-# ╟─94f52d33-836c-4aa2-a110-2f31105dc693
 # ╠═01c779e6-97d4-4300-9e48-cc6001087591
-# ╠═2658d33e-13e8-4a82-bd47-75a251b39579
-# ╠═0563c01f-6ee3-4b4e-9cdb-06632a6ea4ae
+# ╟─2658d33e-13e8-4a82-bd47-75a251b39579
+# ╟─0563c01f-6ee3-4b4e-9cdb-06632a6ea4ae
 # ╠═4871420b-3efe-4165-b4d4-be0ed12b3640
-# ╠═0ab0f1d7-307e-4ed4-b855-e649537eb6da
-# ╟─c02ff179-6e38-4802-bbf1-24427fc7836a
+# ╟─0ab0f1d7-307e-4ed4-b855-e649537eb6da
+# ╠═83ecdeec-7def-4594-a692-738a24d15f99
+# ╠═c02ff179-6e38-4802-bbf1-24427fc7836a
 # ╟─eacf2f85-c96c-42ca-9dcc-9d8469362345
 # ╟─145afb2b-b385-4f6f-bda3-ede01e78e895
-# ╟─747e2dec-b463-421d-926e-94dff0bcdebd
-# ╠═74aea461-1266-45cb-88bc-fb4a9fd37add
+# ╠═747e2dec-b463-421d-926e-94dff0bcdebd
+# ╟─74aea461-1266-45cb-88bc-fb4a9fd37add
 # ╟─4495d236-b15c-44d4-ba2c-8ced7293fa00
-# ╟─07e11473-b9e7-4a6e-9561-c85d63fe559b
-# ╠═a72f705b-eeaa-45cb-8854-8b17b73d4b07
+# ╠═07e11473-b9e7-4a6e-9561-c85d63fe559b
+# ╟─a72f705b-eeaa-45cb-8854-8b17b73d4b07
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
