@@ -86,65 +86,8 @@ function simulate_system_I(task, T₄)
     solve(prob, Tsit5(), reltol=1e-6, abstol=1e-6)
 end
 
-# ╔═╡ 0ab0f1d7-307e-4ed4-b855-e649537eb6da
-# ╠═╡ disabled = true
-#=╠═╡
-function simulate_system_PID(task, T₁, T₂)
-	(; Ta, Ts, δω, νг, tspan) = task
-	u0 = [0.0, 0.0, 0.0]
-
-    function system!(du, u, p, t)
-        φ, ξ, η = u
-        σ = -φ / δω
-        du[1] = (ξ - νг(t)) / Ta
-        du[2] = (η - ξ    ) / Ts
-        du[3] = ( -T₁ * du[1] / δω + σ - η) / T₂
-    end
-
-    prob = ODEProblem(system!, u0, tspan)
-    solve(prob, Tsit5(), reltol=1e-6, abstol=1e-6)
-end
-  ╠═╡ =#
-
-# ╔═╡ 83ecdeec-7def-4594-a692-738a24d15f99
+# ╔═╡ a1b15d29-b7c3-45bb-9da5-ddc9419a4561
 function simulate_system_PID(task, T₁, T₂, T₄)
-    (; Ta, Ts, δω, νг, tspan) = task
-    u0 = [0.0, 0.0, 0.0]
-
-    function system!(du, u, p, t)
-        φ, ξ, η = u
-        σ = -φ / δω
-        du[1] = (ξ - νг(t)) / Ta
-        du[2] = (η - ξ) / Ts
-        du[3] = (-T₁ * du[1] / δω + σ - η + T₄ * σ) / T₂
-    end
-
-    prob = ODEProblem(system!, u0, tspan)
-    solve(prob, Tsit5(), reltol=1e-6, abstol=1e-6)
-end
-
-# ╔═╡ 8deadd1a-9197-4129-880b-46a41f20e805
-function simulate_system_PID_2(task, T₁, T₂, T₄)
-    (; Ta, Ts, δω, νг, tspan) = task
-    u0 = [0.0, 0.0, 0.0, 0.0]  # φ, ξ, η, ζ
-
-    function system!(du, u, p, t)
-        φ, ξ, η, ζ = u
-        σ = -φ / δω
-        σ′ = -(ξ - νг(t)) / (Ta * δω)  # Производная σ
-        
-        du[1] = (ξ - νг(t)) / Ta
-        du[2] = (η - ξ) / Ts
-        du[3] = ζ  # Производная η
-        du[4] = ((T₁ + T₂) * σ′ + σ - T₄ * ζ) / (T₂ * T₄)
-    end
-
-    prob = ODEProblem(system!, u0, tspan)
-    solve(prob, Tsit5(), reltol=1e-6, abstol=1e-6)
-end
-
-# ╔═╡ e76e3d35-a122-49e1-a0cd-6110acc892d1
-function simulate_system_PID_3(task, T₁, T₂, T₄)
     (; Ta, Ts, δω, νг, tspan) = task
     u0 = [0.0, 0.0, 0.0, 0.0]
 
@@ -154,30 +97,10 @@ function simulate_system_PID_3(task, T₁, T₂, T₄)
 
         du[1] = (ξ - νг(t)) / Ta
         du[2] = (η - ξ) / Ts
-        
         du[3] = dη
-        du[4] = ( (T₂+ T₁) * du[1] / δω + 2σ + T₄*dη) / (T₂*T₄)
-    end
-
-    prob = ODEProblem(system!, u0, tspan)
-    solve(prob, Tsit5(), reltol=1e-6, abstol=1e-6)
-end
-
-# ╔═╡ ab7b3f22-5f09-4fda-8b26-6291201d6d84
-function simulate_system_PID_6(task, T₁, T₂, T₄)
-    (; Ta, Ts, δω, νг, tspan) = task
-    u0 = [0.0, 0.0, 0.0, 0.0]
-
-    function system!(du, u, p, t)
-        φ, ξ, η, integral = u
-        σ = -φ / δω
-
-        du[1] = (ξ - νг(t)) / Ta
-        du[2] = (η - ξ) / Ts
-
-        du[4] = σ
-
-        du[3] = (σ + T₄ * integral - T₁ * du[1] / δω - η) / T₂
+		dσ  = -du[1] / δω
+		d2σ = -1 / (δω * Ta) * du[2]
+        du[4] = ( T₁*T₄ * d2σ + (T₂+T₄) * dσ + σ - T₄*dη) / (T₂*T₄)
     end
 
     prob = ODEProblem(system!, u0, tspan)
@@ -290,9 +213,9 @@ function plotter(task, data, name)
 	with_theme(theme_latexfonts()) do
 		sol_P  = simulate_system_P( task)
 		sol_PD = simulate_system_PD(task, data.T₁, data.T₂)
-		# sol_I  = simulate_system_I( task, 5.5)
+		sol_I  = simulate_system_I( task, 2)
 		sol_PI = simulate_system_PI(task, 2)
-		sol_PID = simulate_system_PID_3(task, data.T₁, data.T₂, 2)
+		sol_PID = simulate_system_PID(task, data.T₁/2, 2*data.T₂, 1.5)
 		
 		fig = Figure(size = (800,400))
 		ax = Axis(fig[1, 1],
@@ -3183,13 +3106,9 @@ version = "4.1.0+0"
 # ╠═01c779e6-97d4-4300-9e48-cc6001087591
 # ╠═2658d33e-13e8-4a82-bd47-75a251b39579
 # ╠═0563c01f-6ee3-4b4e-9cdb-06632a6ea4ae
-# ╟─4871420b-3efe-4165-b4d4-be0ed12b3640
-# ╟─0ab0f1d7-307e-4ed4-b855-e649537eb6da
-# ╟─83ecdeec-7def-4594-a692-738a24d15f99
-# ╟─8deadd1a-9197-4129-880b-46a41f20e805
-# ╠═e76e3d35-a122-49e1-a0cd-6110acc892d1
-# ╟─ab7b3f22-5f09-4fda-8b26-6291201d6d84
-# ╠═c02ff179-6e38-4802-bbf1-24427fc7836a
+# ╠═4871420b-3efe-4165-b4d4-be0ed12b3640
+# ╠═a1b15d29-b7c3-45bb-9da5-ddc9419a4561
+# ╟─c02ff179-6e38-4802-bbf1-24427fc7836a
 # ╟─eacf2f85-c96c-42ca-9dcc-9d8469362345
 # ╟─145afb2b-b385-4f6f-bda3-ede01e78e895
 # ╠═747e2dec-b463-421d-926e-94dff0bcdebd
