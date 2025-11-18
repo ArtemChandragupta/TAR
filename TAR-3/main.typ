@@ -57,7 +57,7 @@
   box(stroke:black, table(
     columns: (1fr,1fr,1fr,1fr),
     row-gutter: (1.7pt, auto),
-    table.header[Набор][$T_a$][$T_s$][$delta_omega$],
+    table.header[Набор][$T_a, с$][$T_s, с$][$delta_omega$],
     $1(№3)$ ,$5$ , $0.4$, $0.06$,
     $2(№17)$,$10$, $0.6$, $0.06$
   )),
@@ -321,5 +321,5 @@ $ W_"корр"_2(lambda) = 1 / (delta_omega_2 T_a_2 lambda dot (T_s_2 lambda +1)
 #bibliography(
   "ref.bib",
   style: "gost-r-705-2008-numeric",
-  title: "Литерарура",
+  title: "Литература",
 )

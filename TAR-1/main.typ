@@ -320,5 +320,5 @@ end
 #bibliography(
   "ref.bib",
   style: "gost-r-705-2008-numeric",
-  title: "Литерарура",
+  title: "Литература",
 )

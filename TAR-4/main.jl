@@ -98,20 +98,16 @@ function simulate_system_PID(task, T₁, T₂, T₄)
         du[1] = (ξ - νг(t)) / Ta
         du[2] = (η - ξ) / Ts
         du[3] = dη
+
 		dσ  = -du[1] / δω
-		d2σ = -1 / (δω * Ta) * du[2]
-        du[4] = ( T₁*T₄ * d2σ + (T₂+T₄) * dσ + σ - T₄*dη) / (T₂*T₄)
+		d²σ = -1 / (δω * Ta) * du[2]
+
+        du[4] = ( T₁*T₄ * d²σ + (T₂+T₄) * dσ + σ - T₄*dη) / (T₂*T₄)
     end
 
     prob = ODEProblem(system!, u0, tspan)
     solve(prob, Tsit5(), reltol=1e-6, abstol=1e-6)
 end
-
-# ╔═╡ eacf2f85-c96c-42ca-9dcc-9d8469362345
-# polaroid(data.val_ras, data.i_ras, "pol_ras_3")
-
-# ╔═╡ 145afb2b-b385-4f6f-bda3-ede01e78e895
-# polaroid(data.val_cor, data.i_cor, "pol_cor_3")
 
 # ╔═╡ 74aea461-1266-45cb-88bc-fb4a9fd37add
 function calc(task, ω̄)
@@ -121,20 +117,10 @@ function calc(task, ω̄)
     i_ras = argmin(abs.(abs.(val_ras) .- 1))
 	ω_ras = ω̄[i_ras]
 
-	γ_ras = round(180 + rad2deg(angle(val_ras[i_ras])))
-
 	T₁ = 1 / ω_ras
 	T₂ = 0.1T₁
 
-	W_cor(ω) = W_ras(ω) * (T₁ * im*ω + 1) / (T₂ * im*ω + 1)
-	val_cor = W_cor.(ω̄)
-
-	i_cor = argmin(abs.(abs.(val_cor) .- 1))
-	ω_cor = ω̄[i_cor]
-
-	γ_cor = round(180 + rad2deg(angle(val_cor[i_cor])))
-
-	(; val_ras, i_ras, ω_ras, γ_ras, T₁, T₂, val_cor, i_cor, ω_cor, γ_cor)
+	(; val_ras, i_ras, ω_ras, T₁, T₂)
 end
 
 # ╔═╡ c02ff179-6e38-4802-bbf1-24427fc7836a
@@ -143,6 +129,21 @@ begin
     ω̄ = exp.(log_ω̄)
 
 	data = calc(task, ω̄)
+
+	T4 = 1.73
+	
+	sol_P   = simulate_system_P(  task                      )
+	sol_PD  = simulate_system_PD( task, data.T₁, data.T₂    )
+	sol_PI  = simulate_system_PI( task,                   T4)
+	sol_PID = simulate_system_PID(task, data.T₁, data.T₂, T4)
+
+	sol_I1 = simulate_system_I(task, 0.25)
+	sol_I2 = simulate_system_I(task, 0.5 )
+	sol_I3 = simulate_system_I(task, 1   )
+	sol_I4 = simulate_system_I(task, 2   )
+	sol_I5 = simulate_system_I(task, 4   )
+	sol_I6 = simulate_system_I(task, 8   )
+	sol_I7 = simulate_system_I(task, 100 )
 
 	md"# Вычисления"
 end
@@ -211,16 +212,11 @@ end
 # ╔═╡ 07e11473-b9e7-4a6e-9561-c85d63fe559b
 function plotter(task, data, name)
 	with_theme(theme_latexfonts()) do
-		sol_P  = simulate_system_P( task)
-		sol_PD = simulate_system_PD(task, data.T₁, data.T₂)
-		sol_I  = simulate_system_I( task, 2)
-		sol_PI = simulate_system_PI(task, 2)
-		sol_PID = simulate_system_PID(task, data.T₁/2, 2*data.T₂, 1.5)
 		
 		fig = Figure(size = (800,400))
 		ax = Axis(fig[1, 1],
 				  ylabel = L"\varphi(t)",
-				  xlabel = L"t, c",
+				  xlabel = L"t, c", limits = ((nothing, 10), nothing),
 				  xminorticksvisible = true,
 				  xminorgridvisible = true,
 				  xminorticks = IntervalsBetween(10),
@@ -228,10 +224,9 @@ function plotter(task, data, name)
 				  yminorgridvisible = true,
 				 )
 		
-		plot!(ax, sol_P,   idxs=1, label = L"П")
-		plot!(ax, sol_PD,  idxs=1, label = L"ПД",  color = :red)
-		# plot!(ax, sol_I,   idxs=1, label = L"И",   color = :green)
-		plot!(ax, sol_PI,  idxs=1, label = L"ПИ",  color = :blue)
+		plot!(ax, sol_P,   idxs=1, label = L"П"  , color = :green  )
+		plot!(ax, sol_PD,  idxs=1, label = L"ПД" , color = :red    )
+		plot!(ax, sol_PI,  idxs=1, label = L"ПИ" , color = :blue   )
 		plot!(ax, sol_PID, idxs=1, label = L"ПИД", color = :magenta)
 
 		axislegend()
@@ -243,7 +238,43 @@ function plotter(task, data, name)
 end
 
 # ╔═╡ 747e2dec-b463-421d-926e-94dff0bcdebd
-plotter(task, data, "plot_3")
+plotter(task, data, "plot")
+
+# ╔═╡ 6b0b4e01-714e-4759-a34c-2cf4abeea485
+function plotter_I(task, data, name)
+	with_theme(theme_latexfonts()) do
+		fig = Figure(size = (800,400))
+		ax = Axis(fig[1, 1],
+				  ylabel = L"\varphi(t)",
+				  xlabel = L"t, c", limits = ((0, 10), nothing),
+				  xminorticksvisible = true,
+				  xminorgridvisible  = true,
+				  xminorticks = IntervalsBetween(10),
+				  yminorticksvisible = true,
+				  yminorgridvisible  = true,
+				  yscale = Makie.pseudolog10,
+				  yticks = [-200, -75, -20, -5, -1, 0, 1, 5, 20, 75, 200, 600]
+				 )
+
+		plot!(ax, sol_I1, idxs=1, label = L"T_4 = 0.25"                 )
+		plot!(ax, sol_I2, idxs=1, label = L"T_4 = 0.5" , color = :green )
+		plot!(ax, sol_I3, idxs=1, label = L"T_4 = 1"   , color = :red   )
+		plot!(ax, sol_I4, idxs=1, label = L"T_4 = 2"   , color = :blue  )
+		plot!(ax, sol_I5, idxs=1, label = L"T_4 = 4"   , color = :orange)
+		plot!(ax, sol_I6, idxs=1, label = L"T_4 = 8"   , color = :purple)
+		plot!(ax, sol_I7, idxs=1, label = L"T_4 = 100" , color = :pink  )
+
+		# axislegend(position = :lb)
+		fig[1, 2] = Legend(fig, ax)
+		
+		save("assets/$(name).svg", fig)
+		
+		fig
+	end
+end
+
+# ╔═╡ 63d6ab9f-63d2-4d1c-a3d6-41f9c4560ee1
+plotter_I(task, data, "plot_i")
 
 # ╔═╡ a72f705b-eeaa-45cb-8854-8b17b73d4b07
 # ╠═╡ disabled = true
@@ -3103,18 +3134,18 @@ version = "4.1.0+0"
 # ╔═╡ Cell order:
 # ╟─098273ae-0777-11f0-1293-513a49ace68d
 # ╟─274fcf6a-921f-413b-94cd-c3eded49de0a
-# ╠═01c779e6-97d4-4300-9e48-cc6001087591
-# ╠═2658d33e-13e8-4a82-bd47-75a251b39579
-# ╠═0563c01f-6ee3-4b4e-9cdb-06632a6ea4ae
-# ╠═4871420b-3efe-4165-b4d4-be0ed12b3640
-# ╠═a1b15d29-b7c3-45bb-9da5-ddc9419a4561
-# ╟─c02ff179-6e38-4802-bbf1-24427fc7836a
-# ╟─eacf2f85-c96c-42ca-9dcc-9d8469362345
-# ╟─145afb2b-b385-4f6f-bda3-ede01e78e895
-# ╠═747e2dec-b463-421d-926e-94dff0bcdebd
-# ╟─74aea461-1266-45cb-88bc-fb4a9fd37add
+# ╟─01c779e6-97d4-4300-9e48-cc6001087591
+# ╟─2658d33e-13e8-4a82-bd47-75a251b39579
+# ╟─0563c01f-6ee3-4b4e-9cdb-06632a6ea4ae
+# ╟─4871420b-3efe-4165-b4d4-be0ed12b3640
+# ╟─a1b15d29-b7c3-45bb-9da5-ddc9419a4561
+# ╠═c02ff179-6e38-4802-bbf1-24427fc7836a
+# ╟─747e2dec-b463-421d-926e-94dff0bcdebd
+# ╟─63d6ab9f-63d2-4d1c-a3d6-41f9c4560ee1
+# ╠═74aea461-1266-45cb-88bc-fb4a9fd37add
 # ╟─4495d236-b15c-44d4-ba2c-8ced7293fa00
 # ╠═07e11473-b9e7-4a6e-9561-c85d63fe559b
+# ╠═6b0b4e01-714e-4759-a34c-2cf4abeea485
 # ╟─a72f705b-eeaa-45cb-8854-8b17b73d4b07
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
