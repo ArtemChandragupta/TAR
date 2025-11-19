@@ -32,8 +32,8 @@
 
 #figure(
   [
-    #image("assets/scheme.png", width: 80%)
-    #text(size:12pt, hyphenate:false)[
+    #image("assets/scheme.png", width: 72%)
+    #par(justify: false, text(size:12pt, hyphenate:false)[
       1 --- ротор турбогенератора;
       2 --- паровая ёмкость между регулирующим клапаном и соплами турбины;
       3 --- сервомотор;
@@ -46,7 +46,7 @@
       $eta$ --- относительное изменение положения выходной координаты элемента сравнения; 
       $nu_г$ --- относительное изменение нагрузки на генераторе; 
       $zeta_"му"$ --- относительное изменение положения механизма управления
-    ]
+    ])
   ],
   caption: [Принципиальная схема САР ПТУ],
 ) <SAR> 
@@ -102,6 +102,7 @@
       edgeline("el3", "servo"     , "lamp2"     )
       edgeline("el4", "lamp2"     , "rotor"     )
       edgeline("out", "rotor.east", (rel:(x:1)) )
+      circle(name:"p2", "out.mid", radius: 0.05, fill: black)
 
       line("reverse", ("lamp1", "|-",   ()),"lamp1"  , mark:(end:"stealth") )
       line("out.mid", ((), "|-", "reverse"),"reverse", mark:(end:"stealth") )
@@ -183,6 +184,7 @@ end
       edgeline("el4", "servo"     , "lamp2"     )
       edgeline("el5", "lamp2"     , "rotor"     )
       edgeline("out", "rotor.east", (rel:(x:1)) )
+      circle(name:"p2", "out.mid", radius: 0.05, fill: black)
 
       line("reverse", ("lamp1", "|-",   ()),"lamp1"  , mark:(end:"stealth") )
       line("out.mid", ((), "|-", "reverse"),"reverse", mark:(end:"stealth") )
