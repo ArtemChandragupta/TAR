@@ -3,7 +3,7 @@
 #import "@preview/codly:1.3.0": *    // Листинги
 #import "@preview/cetz:0.4.2"        // Диаграммы
 #import "@preview/lilaq:0.5.0" as lq // Графики
-#import "@preview/tiptoe:0.3.2"
+#import "@preview/tiptoe:0.4.0"
 #import "@preview/fletcher:0.5.8" as fletcher: diagram, node, edge
 
 #let conf(
